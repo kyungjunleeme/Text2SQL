@@ -4,10 +4,11 @@ SHELL := /bin/bash
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?##' Makefile | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-24s\033[0m %s\n", $$1, $$2}'
 
+EXTRAS ?=
 uv-setup: ## Create venv and install deps via uv
 	@if ! command -v uv >/dev/null 2>&1; then echo "[!] uv not found. Install with: pipx install uv  (or) brew install uv"; fi
 	uv venv
-	uv sync
+	if [ -n "$(EXTRAS)" ]; then uv sync $(foreach e,$(EXTRAS),--extra $(e)); else uv sync; fi
 
 db-setup: ## Create sample SQLite DB (data/sample.db) + sample testcases/preds
 	uv run python scripts/setup_db.py
@@ -66,3 +67,8 @@ github-push: ## Push to GitHub (default: kyungjunleeme/Text2SQL)
 	git remote add origin $$remote || true; \
 	git branch -M main; \
 	git push -u origin main
+
+dbt-debug: ## dbt debug (checks profile/connection)
+	DBT_PROFILES_DIR=./dbt uv run dbt debug --project-dir dbt
+
+# ensure sample.db exists automatically before dbt-build

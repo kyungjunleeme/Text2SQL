@@ -4,8 +4,9 @@ tsql_eval_sqlite:
     dev:
       type: sqlite
       threads: 4
-      database: "data/sample.db"
-      schema: "main"
+      # dbt-sqlite>=1.9: map dbt schema -> SQLite file path
+      schemas_and_paths:
+        main: "data/sample.db"
 
 tsql_eval_duckdb:
   target: dev

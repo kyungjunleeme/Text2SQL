@@ -1,3 +1,34 @@
+Metadata-Version: 2.4
+Name: deepeval-text2sql-demo
+Version: 0.3.20
+Summary: DeepEval-based Text-to-SQL evaluation with SQLite/Trino/Databricks/Spark, Spider2 prep, dbt, and pytest.
+Author-email: Kyungjun-ready <example@example.com>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: deepeval>=0.20.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: sqlglot>=25.0.0
+Requires-Dist: click>=8.1.7
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: trino[sqlalchemy]>=0.330.0
+Requires-Dist: databricks-sql-connector>=4.0.0
+Requires-Dist: pytest>=8.0.0
+Requires-Dist: dbt-core>=1.7.0
+Requires-Dist: dbt-sqlite>=1.7.0
+Requires-Dist: dbt-duckdb>=1.7.0
+Provides-Extra: trino
+Requires-Dist: trino[sqlalchemy]>=0.330.0; extra == "trino"
+Provides-Extra: databricks
+Requires-Dist: databricks-sql-connector>=3.3.1; extra == "databricks"
+Provides-Extra: spark
+Requires-Dist: pyhive>=0.7.0; extra == "spark"
+Requires-Dist: thrift>=0.20.0; extra == "spark"
+Requires-Dist: thrift-sasl>=0.4.3; extra == "spark"
+Requires-Dist: pure-sasl>=0.6.2; extra == "spark"
+Requires-Dist: thrift>=0.20.0; extra == "spark"
+Requires-Dist: thrift-sasl>=0.4.3; extra == "spark"
+
 # Text2SQL
 
 [![CI](https://github.com/kyungjunleeme/Text2SQL/actions/workflows/ci.yml/badge.svg)](https://github.com/kyungjunleeme/Text2SQL/actions/workflows/ci.yml) (SQLite / Trino / Databricks / Spark) — with dbt & pytest

@@ -1,7 +1,7 @@
 try:
     from deepeval.metrics import BaseMetric
 except Exception:
-    class BaseMetric: pass
+    class BaseMetric: ...
 try:
     from deepeval.test_case import LLMTestCase
 except Exception:
@@ -20,6 +20,11 @@ class ExecutionAccuracyMetric(BaseMetric):
         self.gold_sql = gold_sql
         self.ignore_order = ignore_order
         self.null_equal = null_equal
+        self.threshold = 1.0
+        self.strict = False
+        self.async_mode = False
+        self.score = None
+        self.reason = None
 
     def _norm(self, df: pd.DataFrame) -> pd.DataFrame:
         df2 = df.copy()
@@ -36,7 +41,7 @@ class ExecutionAccuracyMetric(BaseMetric):
         return self._norm(g).equals(self._norm(p))
 
     def measure(self, test_case: LLMTestCase) -> float:
-        pred_sql = (getattr(test_case, "output", "") or "").strip()
+        pred_sql = ((getattr(test_case,"actual_output",None) or getattr(test_case,"output","")) or "").strip()
         if not pred_sql:
             self.score, self.reason = 0.0, "empty sql"; return self.score
         try:
@@ -53,5 +58,8 @@ class ExecutionAccuracyMetric(BaseMetric):
             self.score, self.reason = 0.0, f"exec/compare error: {e}"
         return self.score
 
+    async def a_measure(self, test_case: LLMTestCase):
+        return self.measure(test_case)
+
     def is_successful(self) -> bool:
-        return self.score == 1.0
+        return (self.score or 0.0) >= self.threshold

@@ -1,7 +1,7 @@
 try:
     from deepeval.metrics import BaseMetric
 except Exception:
-    class BaseMetric: pass
+    class BaseMetric: ...
 try:
     from deepeval.test_case import LLMTestCase
 except Exception:
@@ -61,9 +61,15 @@ class ComponentMatchMetric(BaseMetric):
         self.gold_sql = gold_sql
         self.dialect = dialect
         self.weights = weights or {"tables":0.2,"columns":0.2,"aggregates":0.15,"joins":0.2,"predicates":0.15,"group_by":0.05,"order_by":0.05}
+        self.threshold = 0.85
+        self.strict = False
+        self.async_mode = False
+        self.score = None
+        self.reason = None
+        self.details = None
 
     def measure(self, test_case: LLMTestCase) -> float:
-        pred_sql = (getattr(test_case, "output", "") or "").strip()
+        pred_sql = ((getattr(test_case,"actual_output",None) or getattr(test_case,"output","")) or "").strip()
         try:
             pred_t = _safe_parse(pred_sql, self.dialect)
             p = _collect_components(pred_t)
@@ -85,5 +91,8 @@ class ComponentMatchMetric(BaseMetric):
             self.score, self.reason = 0.0, f"parse/compare error: {e}"; self.details = {"error": str(e)}
         return self.score
 
+    async def a_measure(self, test_case: LLMTestCase):
+        return self.measure(test_case)
+
     def is_successful(self) -> bool:
-        return self.score >= 0.9
+        return (self.score or 0.0) >= self.threshold

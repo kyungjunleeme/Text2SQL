@@ -1,6 +1,6 @@
 [project]
 name = "deepeval-text2sql-demo"
-version = "0.3.20"
+version = "0.3.1"
 description = "DeepEval-based Text-to-SQL evaluation with SQLite/Trino/Databricks/Spark, Spider2 prep, dbt, and pytest."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,4 +35,4 @@ package = true
 [project.optional-dependencies]
 trino = ["trino[sqlalchemy]>=0.330.0"]
 databricks = ["databricks-sql-connector>=3.3.1"]
-spark = ["pyhive>=0.7.0", "thrift>=0.20.0", "thrift-sasl>=0.4.3", "pure-sasl>=0.6.2", "thrift>=0.20.0", "thrift-sasl>=0.4.3"]
+spark = ["pyhive[hive]>=0.7.0", "thrift>=0.20.0", "thrift-sasl>=0.4.3"]
