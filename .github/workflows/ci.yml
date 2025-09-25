@@ -15,6 +15,10 @@ jobs:
         python: ['3.10', '3.11']
         profile: [sqlite, duckdb]
 
+    env:
+      DBT_PROFILES_DIR: ./dbt
+      DBT_ROOT: ${{ github.workspace }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +41,9 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Sync deps (uv)
-        run: uv sync
+        run: |
+          uv venv
+          uv sync
 
       - name: Prepare sample DB
         run: uv run python scripts/setup_db.py
@@ -45,21 +51,24 @@ jobs:
       - name: Pytest
         run: uv run pytest
 
-      - name: dbt seed/build
-        env:
-          DBT_PROFILES_DIR: ./dbt
+      # duckdb 타깃만 어댑터 설치 (pyproject에 안박아도 됨)
+      - name: Install dbt-duckdb (duck target only)
+        if: ${{ matrix.profile == 'duckdb' }}
+        run: uv run python -m pip install "dbt-duckdb>=1.9,<1.11"
+
+      - name: dbt (sqlite target)
+        if: ${{ matrix.profile == 'sqlite' }}
         run: |
-          if [ "${{ matrix.profile }}" = "sqlite" ]; then
-            export DBT_PROFILE=tsql_eval_sqlite
-            uv run dbt seed --project-dir dbt || true
-            uv run dbt build --project-dir dbt
-            uv run dbt test --project-dir dbt
-          else
-            export DBT_PROFILE=tsql_eval_duckdb
-            uv run dbt seed --project-dir dbt
-            uv run dbt build --project-dir dbt --vars '{"employees_source":"employees","departments_source":"departments"}'
-            uv run dbt test --project-dir dbt
-          fi
+          uv run dbt seed  --project-dir dbt --target sqlite
+          uv run dbt build --project-dir dbt --target sqlite
+          uv run dbt test  --project-dir dbt --target sqlite
+
+      - name: dbt (duckdb target)
+        if: ${{ matrix.profile == 'duckdb' }}
+        run: |
+          uv run dbt seed  --project-dir dbt --target duck
+          uv run dbt build --project-dir dbt --target duck
+          uv run dbt test  --project-dir dbt --target duck
 
       - name: Optional: Eval on Trino (if secret set)
         if: ${{ secrets.TRINO_ENGINE_URL != '' }}
@@ -67,7 +76,11 @@ jobs:
           ENGINE_URL: ${{ secrets.TRINO_ENGINE_URL }}
         run: |
           echo "Running Trino evaluation..."
-          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect trino             --report out/trino_report.json
+          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run \
+            --testcases data/testcases_sample.json \
+            --predictions predictions/sample_preds.json \
+            --dialect trino \
+            --report out/trino_report.json
 
       - name: Optional: Eval on Databricks (if secret set)
         if: ${{ secrets.DATABRICKS_ENGINE_URL != '' }}
@@ -75,7 +88,11 @@ jobs:
           ENGINE_URL: ${{ secrets.DATABRICKS_ENGINE_URL }}
         run: |
           echo "Running Databricks evaluation..."
-          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect spark             --report out/dbx_report.json
+          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run \
+            --testcases data/testcases_sample.json \
+            --predictions predictions/sample_preds.json \
+            --dialect spark \
+            --report out/dbx_report.json
 
       - name: Optional: Eval on Spark Thrift Server (if secrets set)
         if: ${{ secrets.SPARK_HOST != '' }}
@@ -87,4 +104,10 @@ jobs:
           SPARK_USER: ${{ secrets.SPARK_USER }}
         run: |
           echo "Running Spark Thrift Server evaluation..."
-          BACKEND=spark           SPARK_HOST="$SPARK_HOST" SPARK_PORT="$SPARK_PORT" SPARK_DB="$SPARK_DB" SPARK_AUTH="$SPARK_AUTH" SPARK_USER="$SPARK_USER"           uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect spark             --report out/spark_report.json
+          BACKEND=spark \
+          SPARK_HOST="$SPARK_HOST" SPARK_PORT="$SPARK_PORT" SPARK_DB="$SPARK_DB" SPARK_AUTH="$SPARK_AUTH" SPARK_USER="$SPARK_USER" \
+          uv run tsql-eval run \
+            --testcases data/testcases_sample.json \
+            --predictions predictions/sample_preds.json \
+            --dialect spark \
+            --report out/spark_report.json
