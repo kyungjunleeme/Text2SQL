@@ -5,17 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="efb0e60f-91d2-4520-a3aa-4750bfdc9ada" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dbt/profiles.yml" beforeDir="false" afterPath="$PROJECT_DIR$/dbt/profiles.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/predictions/sample_preds.json" beforeDir="false" afterPath="$PROJECT_DIR$/predictions/sample_preds.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/cli.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/metrics/component_match.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/metrics/component_match.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/metrics/executable_sql.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/metrics/executable_sql.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/metrics/execution_accuracy.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/metrics/execution_accuracy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/metrics/sql_semantic_match.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/metrics/sql_semantic_match.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tsql_eval/runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tsql_eval/runner.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.deepeval/.latest_test_run.json" beforeDir="false" afterPath="$PROJECT_DIR$/.deepeval/.latest_test_run.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,7 +86,7 @@
       <option name="presentableId" value="Default" />
       <updated>1758799890503</updated>
       <workItem from="1758799891702" duration="901000" />
-      <workItem from="1758807320328" duration="995000" />
+      <workItem from="1758807320328" duration="1447000" />
     </task>
     <servers />
   </component>

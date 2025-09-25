@@ -1,0 +1,82 @@
+# --- OS / Editor -----------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Python build artifacts -----------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.dylib
+
+# --- Virtual env / tooling caches -----------------------------------
+.venv/
+.venv*/
+.python-version
+.env
+.env.*
+.cache/
+.uv/
+.mypy_cache/
+.pytype/
+.pyre/
+.ruff_cache/
+pip-wheel-metadata/
+
+# --- Packaging / wheel ----------------------------------------------
+build/
+dist/
+*.egg-info/
+src/*.egg-info/
+
+# stale local metadata (예: 이전 pyhive[hive] 잔재 방지)
+src/deepeval_text2sql_demo.egg-info/
+
+# --- Tests / Coverage -----------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Project outputs -------------------------------------------------
+out/**
+!out/.gitkeep
+
+# --- Data files (generated DB 등) -----------------------------------
+data/*.db
+data/*.duckdb
+data/*.sqlite
+data/*.parquet
+data/*.csv.tmp
+
+# 시드/샘플은 유지
+!data/seed/**
+!data/seeds/**
+!data/testcases_sample.json
+
+# --- Predictions (생성물은 무시, 샘플만 유지) ------------------------
+predictions/**
+!predictions/sample_preds.json
+!predictions/README.md
+
+# --- dbt artifacts ---------------------------------------------------
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt_packages/
+logs/
+target/
+
+# --- Spark/Trino 잡파일 ---------------------------------------------
+*.crc
+*.log
+
+# --- Archives (배포 산출물은 보통 커밋하지 않음) ---------------------
+*.tar.gz
+*.zip
+
+.idea
