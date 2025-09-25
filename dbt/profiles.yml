@@ -1,0 +1,17 @@
+tsql_eval_sqlite:
+  target: dev
+  outputs:
+    dev:
+      type: sqlite
+      threads: 4
+      database: "data/sample.db"
+      schema: "main"
+
+tsql_eval_duckdb:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      threads: 4
+      path: "data/sample.duckdb"
+      schema: "main"

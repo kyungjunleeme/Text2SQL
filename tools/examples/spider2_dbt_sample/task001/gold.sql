@@ -1,0 +1,1 @@
+SELECT d.name AS dept, COUNT(*) AS cnt FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY d.name

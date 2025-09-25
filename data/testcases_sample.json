@@ -1,0 +1,15 @@
+[
+  {
+    "id": "q1",
+    "question": "부서별 직원 수를 세어 부서명 오름차순으로 보여줘",
+    "gold_sql": [
+      "SELECT d.name AS dept, COUNT(*) AS cnt FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY d.name",
+      "SELECT name AS dept, COUNT(*) AS cnt FROM (SELECT e.dept_id, d.name FROM employees e JOIN departments d ON e.dept_id = d.id) t GROUP BY name ORDER BY name"
+    ]
+  },
+  {
+    "id": "q2",
+    "question": "각 부서의 평균 급여를 계산해 높은 순서로 보여줘",
+    "gold_sql": "SELECT d.name AS dept, AVG(e.salary) AS avg_salary FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY avg_salary DESC"
+  }
+]

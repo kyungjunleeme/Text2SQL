@@ -1,0 +1,14 @@
+name: 'tsql_eval_dbt'
+version: '1.0.0'
+config-version: 2
+profile: "{{ env_var('DBT_PROFILE', 'tsql_eval_sqlite') }}"
+model-paths: ['models']
+seed-paths: ['seeds']
+target-path: 'target'
+clean-targets: ['target']
+models:
+  +materialized: view
+  tsql_eval_dbt: {}
+vars:
+  employees_source: "employees"
+  departments_source: "departments"

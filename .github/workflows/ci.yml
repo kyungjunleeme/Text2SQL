@@ -1,0 +1,90 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11']
+        profile: [sqlite, duckdb]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.python }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python }}-
+            ${{ runner.os }}-uv-
+
+      - name: Sync deps (uv)
+        run: uv sync
+
+      - name: Prepare sample DB
+        run: uv run python scripts/setup_db.py
+
+      - name: Pytest
+        run: uv run pytest
+
+      - name: dbt seed/build
+        env:
+          DBT_PROFILES_DIR: ./dbt
+        run: |
+          if [ "${{ matrix.profile }}" = "sqlite" ]; then
+            export DBT_PROFILE=tsql_eval_sqlite
+            uv run dbt seed --project-dir dbt || true
+            uv run dbt build --project-dir dbt
+            uv run dbt test --project-dir dbt
+          else
+            export DBT_PROFILE=tsql_eval_duckdb
+            uv run dbt seed --project-dir dbt
+            uv run dbt build --project-dir dbt --vars '{"employees_source":"employees","departments_source":"departments"}'
+            uv run dbt test --project-dir dbt
+          fi
+
+      - name: Optional: Eval on Trino (if secret set)
+        if: ${{ secrets.TRINO_ENGINE_URL != '' }}
+        env:
+          ENGINE_URL: ${{ secrets.TRINO_ENGINE_URL }}
+        run: |
+          echo "Running Trino evaluation..."
+          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect trino             --report out/trino_report.json
+
+      - name: Optional: Eval on Databricks (if secret set)
+        if: ${{ secrets.DATABRICKS_ENGINE_URL != '' }}
+        env:
+          ENGINE_URL: ${{ secrets.DATABRICKS_ENGINE_URL }}
+        run: |
+          echo "Running Databricks evaluation..."
+          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect spark             --report out/dbx_report.json
+
+      - name: Optional: Eval on Spark Thrift Server (if secrets set)
+        if: ${{ secrets.SPARK_HOST != '' }}
+        env:
+          SPARK_HOST: ${{ secrets.SPARK_HOST }}
+          SPARK_PORT: ${{ secrets.SPARK_PORT }}
+          SPARK_DB: ${{ secrets.SPARK_DB }}
+          SPARK_AUTH: ${{ secrets.SPARK_AUTH }}
+          SPARK_USER: ${{ secrets.SPARK_USER }}
+        run: |
+          echo "Running Spark Thrift Server evaluation..."
+          BACKEND=spark           SPARK_HOST="$SPARK_HOST" SPARK_PORT="$SPARK_PORT" SPARK_DB="$SPARK_DB" SPARK_AUTH="$SPARK_AUTH" SPARK_USER="$SPARK_USER"           uv run tsql-eval run             --testcases data/testcases_sample.json             --predictions predictions/sample_preds.json             --dialect spark             --report out/spark_report.json

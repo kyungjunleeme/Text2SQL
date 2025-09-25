@@ -1,0 +1,10 @@
+[
+  {
+    "id": "q1",
+    "pred_sql": "SELECT d.name AS dept, COUNT(1) AS cnt FROM departments d JOIN employees e ON e.dept_id = d.id GROUP BY d.name ORDER BY d.name"
+  },
+  {
+    "id": "q2",
+    "pred_sql": "SELECT d.name AS dept, AVG(e.salary) AS avg_salary FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY avg_salary DESC"
+  }
+]
