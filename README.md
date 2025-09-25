@@ -79,3 +79,5 @@ make uv-setup EXTRAS="trino spark databricks"
 
 - https://www.databricks.com/blog/improving-text2sql-performance-ease-databricks?utm_source=chatgpt.com
 - https://www.databricks.com/blog/unlocking-financial-insights-nyse-ice?utm_source=chatgpt.com
+
+# test
