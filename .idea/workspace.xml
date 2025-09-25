@@ -4,21 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="efb0e60f-91d2-4520-a3aa-4750bfdc9ada" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/data_source_mapping.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/sample.db" beforeDir="false" afterPath="$PROJECT_DIR$/data/sample.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dbt/dbt_project.yml" beforeDir="false" afterPath="$PROJECT_DIR$/dbt/dbt_project.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dbt/models/schema.yml" beforeDir="false" afterPath="$PROJECT_DIR$/dbt/models/schema.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dbt/profiles.yml" beforeDir="false" afterPath="$PROJECT_DIR$/dbt/profiles.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/predictions/sample_preds.json" beforeDir="false" afterPath="$PROJECT_DIR$/predictions/sample_preds.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/deepeval_text2sql_demo.egg-info/PKG-INFO" beforeDir="false" afterPath="$PROJECT_DIR$/src/deepeval_text2sql_demo.egg-info/PKG-INFO" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/deepeval_text2sql_demo.egg-info/requires.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/deepeval_text2sql_demo.egg-info/requires.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
-    </list>
+    <list default="true" id="efb0e60f-91d2-4520-a3aa-4750bfdc9ada" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -102,7 +88,7 @@
       <option name="presentableId" value="Default" />
       <updated>1758799890503</updated>
       <workItem from="1758799891702" duration="901000" />
-      <workItem from="1758807320328" duration="4117000" />
+      <workItem from="1758807320328" duration="4627000" />
     </task>
     <servers />
   </component>

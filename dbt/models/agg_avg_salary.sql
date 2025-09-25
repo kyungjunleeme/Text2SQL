@@ -1,13 +1,15 @@
 {{ config(materialized='table') }}
+
 with e as (
-  {% set esrc = var('employees_source', 'employees') %}
-  select * from {{ esrc }}
+  select * from {{ ref('stg_employees') }}
 ),
 d as (
-  {% set dsrc = var('departments_source', 'departments') %}
-  select * from {{ dsrc }}
+  select * from {{ ref('stg_departments') }}
 )
-select d.name as dept, avg(e.salary) as avg_salary
+select
+  d.name as dept,
+  avg(e.salary) as avg_salary
 from e
 join d on e.dept_id = d.id
 group by d.name
+order by avg_salary desc

@@ -1,3 +1,8 @@
 {{ config(materialized='view') }}
-{% set src = var('employees_source', 'employees') %}
-select * from {{ src }}
+
+select
+  id,
+  name,
+  dept_id,
+  salary
+from {{ ref('employees') }}

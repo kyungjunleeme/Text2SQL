@@ -1,3 +1,6 @@
 {{ config(materialized='view') }}
-{% set src = var('departments_source', 'departments') %}
-select * from {{ src }}
+
+select
+  id,
+  name
+from {{ ref('departments') }}
