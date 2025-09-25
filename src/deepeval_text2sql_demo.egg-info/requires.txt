@@ -9,10 +9,16 @@ databricks-sql-connector>=4.0.0
 pytest>=8.0.0
 dbt-core>=1.7.0
 dbt-sqlite>=1.7.0
-dbt-duckdb>=1.7.0
+dbt-duckdb<1.11,>=1.9
+dbt-colibri>=0.2.5
 
 [databricks]
 databricks-sql-connector>=3.3.1
+
+[dbt]
+dbt-core<1.11,>=1.10
+dbt-sqlite<1.11,>=1.9
+dbt-duckdb<1.11,>=1.9
 
 [spark]
 pyhive>=0.7.0

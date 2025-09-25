@@ -80,3 +80,4 @@ target/
 *.zip
 
 .idea
+.deepeval

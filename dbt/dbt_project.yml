@@ -1,7 +1,7 @@
 name: 'tsql_eval_dbt'
 version: '1.0.0'
 config-version: 2
-profile: "{{ env_var('DBT_PROFILE', 'tsql_eval_sqlite') }}"
+profile: tsql_eval   # ← 여기!
 model-paths: ['models']
 seed-paths: ['seeds']
 target-path: 'target'

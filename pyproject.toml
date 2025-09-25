@@ -15,11 +15,12 @@ dependencies = [
   "python-dotenv>=1.0.1",
   # Optional backends
   "trino[sqlalchemy]>=0.330.0",
-  "databricks-sql-connector>=4.0.0",  # Testing + dbt
+  "databricks-sql-connector>=4.0.0", # Testing + dbt
   "pytest>=8.0.0",
   "dbt-core>=1.7.0",
   "dbt-sqlite>=1.7.0",
-  "dbt-duckdb>=1.7.0",
+  "dbt-duckdb>=1.9,<1.11",
+  "dbt-colibri>=0.2.5",
 ]
 
 [project.scripts]
@@ -36,3 +37,8 @@ package = true
 trino = ["trino[sqlalchemy]>=0.330.0"]
 databricks = ["databricks-sql-connector>=3.3.1"]
 spark = ["pyhive>=0.7.0", "thrift>=0.20.0", "thrift-sasl>=0.4.3", "pure-sasl>=0.6.2", "thrift>=0.20.0", "thrift-sasl>=0.4.3"]
+dbt = [
+  "dbt-core>=1.10,<1.11",
+  "dbt-sqlite>=1.9,<1.11",
+  "dbt-duckdb>=1.9,<1.11",
+]

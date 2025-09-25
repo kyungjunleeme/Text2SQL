@@ -1,8 +1,18 @@
+DBT_ROOT ?= $(CURDIR)
+export DBT_ROOT
+
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
+.PHONY: help uv-setup db-setup \
+        eval-sqlite eval-trino eval-databricks eval-spark \
+        spider2-prepare spider2-dbt-sample spider2-lite-prepare spider2-build-sqlite eval-spider2-lite \
+        dbt-build dbt-run dbt-test dbt-debug \
+        test git-init github-push \
+        uv-add-colibri uv-add-duckdb dbt-compile dbt-docs colibri colibri-open colibri-clean
+
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?##' Makefile | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-24s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_.-]+:.*?##' Makefile | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-24s\033[0m %s\n", $$1, $$2}'
 
 EXTRAS ?=
 uv-setup: ## Create venv and install deps via uv
@@ -45,12 +55,14 @@ eval-spider2-lite: ## Run eval using built Spider2 SQLite DB
 	BACKEND=sqlalchemy ENGINE_URL=sqlite:///./data/spider2.db uv run tsql-eval run --testcases out/spider2_testcases.json --predictions predictions/sample_preds.json --dialect spark --report out/spider2_report.json
 
 # --- dbt ---
-dbt-build: ## dbt build (dbt-sqlite; uses data/sample.db)
-	DBT_PROFILES_DIR=./dbt uv run dbt build --project-dir dbt
+dbt-build: db-setup ## dbt build (SQLite target by default)
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt build --project-dir dbt --target sqlite
 dbt-run: ## dbt run
-	DBT_PROFILES_DIR=./dbt uv run dbt run --project-dir dbt
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt run --project-dir dbt --target sqlite
 dbt-test: ## dbt test
-	DBT_PROFILES_DIR=./dbt uv run dbt test --project-dir dbt
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt test --project-dir dbt --target sqlite
+dbt-debug: ## dbt debug (checks profile/connection)
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt debug --project-dir dbt --target sqlite
 
 # --- tests ---
 test: ## Run pytest
@@ -68,7 +80,25 @@ github-push: ## Push to GitHub (default: kyungjunleeme/Text2SQL)
 	git branch -M main; \
 	git push -u origin main
 
-dbt-debug: ## dbt debug (checks profile/connection)
-	DBT_PROFILES_DIR=./dbt uv run dbt debug --project-dir dbt
+# --- docs / lineage (dbt-colibri) -----------------------------------
+uv-add-colibri: ## Install dbt-colibri
+	uv add dbt-colibri
+uv-add-duckdb: ## Install dbt-duckdb
+	uv add "dbt-duckdb>=1.9,<1.11"
 
-# ensure sample.db exists automatically before dbt-build
+dbt-compile: ## Generate manifest.json (duckdb target for colibri)
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt compile --project-dir dbt --target duck
+
+dbt-docs: ## Generate catalog.json (duckdb target for colibri)
+	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt docs generate --project-dir dbt --target duck
+
+# Run inside dbt/ so colibri uses default target/ and dist/ without flags
+colibri: dbt-compile dbt-docs ## Build lineage site at dbt/dist (duckdb-based)
+	cd dbt && uv run colibri generate
+	@echo "✅ Open dbt/dist/index.html"
+
+colibri-open: ## Open lineage site (macOS/Linux)
+	@[ "$$(uname)" = "Darwin" ] && open dbt/dist/index.html || xdg-open dbt/dist/index.html 2>/dev/null || echo "Open dbt/dist/index.html in your browser"
+
+colibri-clean: ## Remove generated lineage site
+	rm -rf dbt/dist

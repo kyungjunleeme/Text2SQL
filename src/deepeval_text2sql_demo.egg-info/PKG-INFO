@@ -16,7 +16,8 @@ Requires-Dist: databricks-sql-connector>=4.0.0
 Requires-Dist: pytest>=8.0.0
 Requires-Dist: dbt-core>=1.7.0
 Requires-Dist: dbt-sqlite>=1.7.0
-Requires-Dist: dbt-duckdb>=1.7.0
+Requires-Dist: dbt-duckdb<1.11,>=1.9
+Requires-Dist: dbt-colibri>=0.2.5
 Provides-Extra: trino
 Requires-Dist: trino[sqlalchemy]>=0.330.0; extra == "trino"
 Provides-Extra: databricks
@@ -28,6 +29,10 @@ Requires-Dist: thrift-sasl>=0.4.3; extra == "spark"
 Requires-Dist: pure-sasl>=0.6.2; extra == "spark"
 Requires-Dist: thrift>=0.20.0; extra == "spark"
 Requires-Dist: thrift-sasl>=0.4.3; extra == "spark"
+Provides-Extra: dbt
+Requires-Dist: dbt-core<1.11,>=1.10; extra == "dbt"
+Requires-Dist: dbt-sqlite<1.11,>=1.9; extra == "dbt"
+Requires-Dist: dbt-duckdb<1.11,>=1.9; extra == "dbt"
 
 # Text2SQL
 

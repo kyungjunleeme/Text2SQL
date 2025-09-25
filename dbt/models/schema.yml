@@ -22,8 +22,9 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_departments')
-              field: id
+              arguments:
+                to: ref('stg_departments')
+                field: id
 
   - name: agg_avg_salary
     description: "Average salary per department"
