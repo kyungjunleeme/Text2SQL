@@ -1,2 +1,0 @@
-[console_scripts]
-tsql-eval = tsql_eval.cli:main
