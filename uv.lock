@@ -592,9 +592,12 @@ dependencies = [
     { name = "dbt-duckdb" },
     { name = "dbt-sqlite" },
     { name = "deepeval" },
+    { name = "duckdb" },
+    { name = "duckdb-engine" },
     { name = "pandas" },
     { name = "pytest" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
     { name = "trino", extra = ["sqlalchemy"] },
@@ -632,11 +635,14 @@ requires-dist = [
     { name = "dbt-sqlite", specifier = ">=1.7.0" },
     { name = "dbt-sqlite", marker = "extra == 'dbt'", specifier = ">=1.9,<1.11" },
     { name = "deepeval", specifier = ">=0.20.0" },
+    { name = "duckdb", specifier = ">=1.4.0" },
+    { name = "duckdb-engine", specifier = ">=0.17.0" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "pure-sasl", marker = "extra == 'spark'", specifier = ">=0.6.2" },
     { name = "pyhive", marker = "extra == 'spark'", specifier = ">=0.7.0" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "requests", specifier = ">=2.32.5" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "sqlglot", specifier = ">=25.0.0" },
     { name = "thrift", marker = "extra == 'spark'", specifier = ">=0.20.0" },
@@ -694,6 +700,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/23/32/57866cf8881288b3dfb9212720221fb890daaa534dbdc6fe3fff3979ecd1/duckdb-1.4.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2de258a93435c977a0ec3a74ec8f60c2f215ddc73d427ee49adc4119558facd3", size = 18421289, upload-time = "2025-09-16T10:22:21.564Z" },
     { url = "https://files.pythonhosted.org/packages/a0/83/7438fb43be451a7d4a04650aaaf662b2ff2d95895bbffe3e0e28cbe030c9/duckdb-1.4.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a6d3659641d517dd9ed1ab66f110cdbdaa6900106f116effaf2dbedd83c38de3", size = 20426547, upload-time = "2025-09-16T10:22:23.759Z" },
     { url = "https://files.pythonhosted.org/packages/21/b2/98fb89ae81611855f35984e96f648d871f3967bb3f524b51d1372d052f0c/duckdb-1.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:07fcc612ea5f0fe6032b92bcc93693034eb00e7a23eb9146576911d5326af4f7", size = 12290467, upload-time = "2025-09-16T10:22:25.923Z" },
+]
+
+[[package]]
+name = "duckdb-engine"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "duckdb" },
+    { name = "packaging" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/d5/c0d8d0a4ca3ffea92266f33d92a375e2794820ad89f9be97cf0c9a9697d0/duckdb_engine-0.17.0.tar.gz", hash = "sha256:396b23869754e536aa80881a92622b8b488015cf711c5a40032d05d2cf08f3cf", size = 48054, upload-time = "2025-03-29T09:49:17.663Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/a2/e90242f53f7ae41554419b1695b4820b364df87c8350aa420b60b20cab92/duckdb_engine-0.17.0-py3-none-any.whl", hash = "sha256:3aa72085e536b43faab635f487baf77ddc5750069c16a2f8d9c6c3cb6083e979", size = 49676, upload-time = "2025-03-29T09:49:15.564Z" },
 ]
 
 [[package]]

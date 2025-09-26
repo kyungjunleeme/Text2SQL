@@ -1,7 +1,7 @@
 name: 'tsql_eval_dbt'
 version: '1.0.0'
 config-version: 2
-profile: tsql_eval   # ← 여기!
+profile: tsql_eval
 model-paths: ['models']
 seed-paths: ['seeds']
 target-path: 'target'

@@ -68,18 +68,6 @@ dbt-debug: ## dbt debug (checks profile/connection)
 test: ## Run pytest
 	uv run pytest
 
-# --- git ---
-git-init: ## Initialize git repo and make initial commit
-	git init
-	git add .
-	git commit -m "Init: DeepEval Text-to-SQL demo v3.1"
-
-github-push: ## Push to GitHub (default: kyungjunleeme/Text2SQL)
-	@remote=$${GIT_REMOTE:-git@github.com:kyungjunleeme/Text2SQL.git}; \
-	git remote add origin $$remote || true; \
-	git branch -M main; \
-	git push -u origin main
-
 # --- docs / lineage (dbt-colibri) -----------------------------------
 uv-add-colibri: ## Install dbt-colibri
 	uv add dbt-colibri
@@ -102,3 +90,34 @@ colibri-open: ## Open lineage site (macOS/Linux)
 
 colibri-clean: ## Remove generated lineage site
 	rm -rf dbt/dist
+
+# --- NYC Taxi with DuckDB ------------------------------------------
+.PHONY: nyc-duckdb nyc-predict-ollama-duck nyc-eval-duckdb
+
+nyc-duckdb: ## Build DuckDB from NYC Taxi 3M sample (data/nyc_taxi.duckdb)
+	uv run python scripts/nyc_to_duckdb.py
+
+nyc-predict-ollama-duck: ## LLM으로 DuckDB용 예측 생성
+	uv run python tools/predict_ollama_nyc_duckdb.py \
+	  --testcases data/testcases_nyc_duckdb.json \
+	  --output    predictions/nyc_duckdb_preds.json \
+	  --model     $${OLLAMA_MODEL:-llama3.1:8b}
+
+nyc-eval-duckdb: ## Evaluate with tsql-eval on DuckDB
+	BACKEND=sqlalchemy ENGINE_URL=duckdb:///./data/nyc_taxi.duckdb \
+	uv run tsql-eval run \
+	  --testcases data/testcases_nyc_duckdb.json \
+	  --predictions predictions/nyc_duckdb_preds.json \
+	  --dialect duckdb \
+	  --report out/nyc_duckdb_report.json
+
+# --- site (GitHub Pages) ----------------------------------------
+.PHONY: site-build site-clean
+
+site-build: ## Build static site to ./site from reports in ./out
+	uv run python scripts/build_site.py
+	@echo "Open ./site/index.html"
+
+site-clean: ## Remove ./site
+	rm -rf site
+
