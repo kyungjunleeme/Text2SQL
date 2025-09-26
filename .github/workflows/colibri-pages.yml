@@ -50,16 +50,18 @@ jobs:
         if: ${{ matrix.profile == 'duckdb' }}
         env:
           DUCKDB_PATH: data/nyc_taxi.duckdb
+        shell: bash
         run: |
           mkdir -p data
           uv run python scripts/nyc_to_duckdb.py
           # sanity check: 테이블 존재/카운트 확인
           python - <<'PY'
-      import duckdb
-      con = duckdb.connect('data/nyc_taxi.duckdb')
-      print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
-      print('count trips_small:', con.sql("select count(*) from nyc.trips_small").fetchall())
-      PY
+          import duckdb
+          con = duckdb.connect('data/nyc_taxi.duckdb')
+          print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
+          print('count trips_small:', con.sql("select count(*) from nyc.trips_small").fetchall())
+          PY
+
 
       - name: Build dbt artifacts (duckdb)
         if: ${{ matrix.profile == 'duckdb' }}
