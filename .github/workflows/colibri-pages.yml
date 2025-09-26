@@ -56,7 +56,7 @@ jobs:
           DUCKDB_PATH: data/nyc_taxi.duckdb
         run: |
           mkdir -p data
-          uv run python scripts/nyc_to_duckdb.py
+          uv run python scripts/sync_to_duckdb.py
           python - <<'PY'
           import duckdb
           con = duckdb.connect('data/nyc_taxi.duckdb')
