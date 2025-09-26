@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.10', '3.11']
-        profile: [sqlite, duckdb]
+        python: [ "3.10", "3.11" ]
+        profile: [ sqlite, duckdb ]
 
     env:
       DBT_PROFILES_DIR: ./dbt
@@ -28,8 +28,10 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install uv
-        run: pipx install uv
+      - name: Install uv (via pipx)
+        run: |
+          pipx install uv
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -46,15 +48,18 @@ jobs:
           uv sync
 
       - name: Prepare sample DB
-        run: uv run python scripts/setup_db.py
+        run: |
+          uv run python scripts/setup_db.py
 
       - name: Pytest
-        run: uv run pytest
+        run: |
+          uv run pytest
 
-      # duckdb 타깃만 어댑터 설치 (pyproject에 안박아도 됨)
+      # duckdb 타깃에서만 어댑터 설치
       - name: Install dbt-duckdb (duck target only)
         if: ${{ matrix.profile == 'duckdb' }}
-        run: uv run python -m pip install "dbt-duckdb>=1.9,<1.11"
+        run: |
+          uv run python -m pip install "dbt-duckdb>=1.9,<1.11"
 
       - name: dbt (sqlite target)
         if: ${{ matrix.profile == 'sqlite' }}
@@ -71,7 +76,7 @@ jobs:
           uv run dbt test  --project-dir dbt --target duck
 
       - name: Optional: Eval on Trino (if secret set)
-        if: ${{ secrets.TRINO_ENGINE_URL != '' }}
+        if: ${{ secrets.TRINO_ENGINE_URL }}
         env:
           ENGINE_URL: ${{ secrets.TRINO_ENGINE_URL }}
         run: |
@@ -83,7 +88,7 @@ jobs:
             --report out/trino_report.json
 
       - name: Optional: Eval on Databricks (if secret set)
-        if: ${{ secrets.DATABRICKS_ENGINE_URL != '' }}
+        if: ${{ secrets.DATABRICKS_ENGINE_URL }}
         env:
           ENGINE_URL: ${{ secrets.DATABRICKS_ENGINE_URL }}
         run: |
@@ -95,7 +100,7 @@ jobs:
             --report out/dbx_report.json
 
       - name: Optional: Eval on Spark Thrift Server (if secrets set)
-        if: ${{ secrets.SPARK_HOST != '' }}
+        if: ${{ secrets.SPARK_HOST }}
         env:
           SPARK_HOST: ${{ secrets.SPARK_HOST }}
           SPARK_PORT: ${{ secrets.SPARK_PORT }}
