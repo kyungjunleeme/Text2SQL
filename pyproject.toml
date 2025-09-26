@@ -4,7 +4,7 @@ version = "0.3.20"
 description = "DeepEval-based Text-to-SQL evaluation with SQLite/Trino/Databricks/Spark, Spider2 prep, dbt, and pytest."
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "Kyungjun-ready", email = "example@example.com" }]
+authors = [{ name = "Kyungjun", email = "kyungjunlee.me@gmail.com" }]
 
 dependencies = [
   "deepeval>=0.20.0",

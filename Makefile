@@ -34,9 +34,9 @@ uv-add-duckdb: ## Install dbt-duckdb
 	uv add "dbt-duckdb>=1.9,<1.11"
 
 # ========== NYC Taxi -> DuckDB ==========
-.PHONY: nyc-duckdb
+.PHONY: sync-duckdb
 nyc-duckdb: ## Build DuckDB from NYC Taxi 3M sample (data/nyc_taxi.duckdb)
-	uv run python scripts/nyc_to_duckdb.py
+	uv run python scripts/sync_to_duckdb.py
 
 # ========== dbt (DuckDB target) ==========
 .PHONY: dbt-seed-duck dbt-build-duck dbt-run-duck dbt-test-duck dbt-debug-duck dbt-compile-duck dbt-docs-duck

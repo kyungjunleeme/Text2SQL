@@ -44,7 +44,7 @@ jobs:
         run: |
           python - <<'PY'
           import duckdb
-          con = duckdb.connect('data/nyc_taxi.duckdb')
+          con = duckdb.connect('data/sync_taxi.duckdb')
           print(con.sql("select count(*) as cnt from nyc.trips_small").fetchall())
           PY
 

@@ -1,14 +1,15 @@
+# ./dbt/profiles.yml
 tsql_eval_duckdb:
   target: duck
   outputs:
     duck:
       type: duckdb
-      # Makefile에서 DBT_ROOT를 이미 export하므로 절대경로/상대경로 이슈 없음
-      path: "{{ env_var('DBT_ROOT') }}/data/nyc_taxi.duckdb"
-      schema: main          # dbt가 결과물을 올릴 기본 스키마
+      # 로컬/CI 공통 경로 (환경변수 없으면 기본값 사용)
+      path: "{{ env_var('DUCKDB_PATH', 'data/nyc_taxi.duckdb') }}"
       threads: 4
-      # 필요 확장자. (httpfs/parquet/json 등은 상황에 맞게 유지/제거)
+      schema: nyc
       extensions:
         - httpfs
         - parquet
-        - json
+      settings:
+        timezone: "UTC"
