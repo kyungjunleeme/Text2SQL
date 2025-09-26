@@ -1,341 +1,266 @@
 # scripts/build_site.py
 from __future__ import annotations
-
-import json
-import os
+import json, shutil, re
 from pathlib import Path
+from typing import Dict, Any, List
 from datetime import datetime, timezone
-from typing import List, Dict, Any
 from html import escape
 
+ROOT = Path(".")
+OUT_DIR = ROOT / "out"
+SITE_DIR = ROOT / "site"
+SITE_OUT_DIR = SITE_DIR / "out"
+TITLE = "Text2SQL – Model Comparison (llama · chatgpt · genie)"
 
-SITE_DIR = Path("site")
-OUT_DIR = Path("out")
-TITLE = "Text2SQL Report"
+# ---- helpers ---------------------------------------------------------------
 
+def now_utc_str() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
 
-# ---------- HTML skeleton (responsive + centered + cards/grid) ----------
+MODEL_KEYS = ("llama", "chatgpt", "genie")
+
+def detect_model_from_filename(name: str) -> str:
+    low = name.lower()
+    for k in MODEL_KEYS:
+        if k in low:
+            return k
+    return "other"
+
+def copy_reports_into_site() -> None:
+    SITE_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    if OUT_DIR.exists():
+        for p in OUT_DIR.glob("*.json"):
+            shutil.copy2(p, SITE_OUT_DIR / p.name)
+
+def load_reports() -> List[Dict[str, Any]]:
+    reps: List[Dict[str, Any]] = []
+    if not SITE_OUT_DIR.exists():
+        return reps
+    for p in sorted(SITE_OUT_DIR.glob("*.json")):
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            model = detect_model_from_filename(p.name)
+            reps.append({"path": p, "model": model, "data": data})
+        except Exception:
+            continue
+    return reps
+
+def summarize_one(rep: Dict[str, Any]) -> Dict[str, Any]:
+    data = rep["data"]
+    results = data.get("results", [])
+    passed = sum(1 for r in results if r.get("passed_all") is True)
+    total = len(results)
+    # metric-level summary
+    metric_pass: Dict[str, Dict[str, int]] = {}  # {name: {"pass":x,"total":y}}
+    for r in results:
+        for m in r.get("metrics", []):
+            n = str(m.get("name", "metric"))
+            ok = False
+            score = m.get("score")
+            thr = m.get("threshold")
+            if score is not None and thr is not None:
+                try:
+                    ok = float(score) >= float(thr)
+                except Exception:
+                    ok = False
+            d = metric_pass.setdefault(n, {"pass": 0, "total": 0})
+            d["total"] += 1
+            if ok:
+                d["pass"] += 1
+    return {
+        "file": rep["path"].name,
+        "model": rep["model"],
+        "passed": passed,
+        "total": total,
+        "metric_pass": metric_pass,
+    }
+
+def pct(n: int, d: int) -> str:
+    return "—" if d <= 0 else f"{(n/d)*100:.1f}%"
+
+# ---- HTML ------------------------------------------------------------------
+
+CSS = """
+:root{--bg:#0b0f14;--panel:#0f172a;--card:#0f1321;--text:#e5e7eb;--muted:#94a3b8;
+--accent:#22d3ee;--border:#1f2937;--ok:#10b981;--err:#ef4444}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#0f172a 0,var(--bg) 60%);
+color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',Arial,'Apple SD Gothic Neo','맑은 고딕',sans-serif}
+.container{width:min(1180px,100% - 2rem);margin:32px auto}
+header{text-align:center;margin-bottom:24px}
+header h1{margin:0 0 6px;font-size:clamp(20px,3vw,30px)}
+header p{margin:0;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:linear-gradient(180deg,var(--panel),var(--card));border:1px solid var(--border);
+border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.02)}
+.card h2{margin:0 0 10px;font-size:clamp(16px,2.2vw,20px)}
+.sub{color:var(--muted);font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;line-height:20px;border:1px solid var(--border)}
+.ok{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35);color:#a7f3d0}
+.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#fecaca}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:12px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;background:var(--panel);
+border:1px solid var(--border);border-radius:12px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
+thead th{position:sticky;top:0;background:#0b1220;z-index:1}
+pre,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:13px}
+pre{margin:0;padding:12px;background:#0b1220;border:1px solid var(--border);border-radius:12px;overflow:auto;white-space:pre-wrap}
+.model-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:980px){.model-3col{grid-template-columns:1fr}}
+.model-card{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:12px}
+.model-card h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.kv{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.kv .badge{background:#0b1220}
+ul{margin:0;padding-left:18px}
+footer{margin:24px 0 8px;text-align:center;color:var(--muted);font-size:12px}
+"""
+
 def base_html(title: str, body: str) -> str:
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     return f"""<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{escape(title)}</title>
-  <style>
-    :root {{
-      --bg: #0b0f14;
-      --panel: #0f172a;
-      --card: #111827;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --accent: #22d3ee;
-      --border: #1f2937;
-      --ok: #10b981;
-      --warn: #f59e0b;
-      --err: #ef4444;
-    }}
-    * {{ box-sizing: border-box; }}
-    html, body {{ height: 100%; }}
-    body {{
-      margin: 0;
-      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans KR', Arial, 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
-      color: var(--text);
-      background: radial-gradient(1200px 600px at 50% -10%, #0f172a 0, var(--bg) 60%);
-    }}
-
-    /* 가운데 정렬 + 반응형 폭 */
-    .container {{
-      width: min(1100px, 100% - 2rem);
-      margin: 32px auto;
-    }}
-
-    header {{
-      text-align: center;
-      margin-bottom: 24px;
-    }}
-    header h1 {{
-      margin: 0 0 6px;
-      font-size: clamp(20px, 3vw, 32px);
-      letter-spacing: .2px;
-    }}
-    header p {{
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-    }}
-
-    /* 카드 & 그리드 레이아웃 */
-    .grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }}
-    .card {{
-      background: linear-gradient(180deg, var(--panel), var(--card));
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px 18px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.02);
-    }}
-    .card h2 {{
-      margin: 0 0 10px;
-      font-size: clamp(16px, 2.2vw, 20px);
-    }}
-
-    /* 표: 모바일 스크롤 대응 */
-    .table-wrap {{ overflow-x: auto; }}
-    table {{
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-    }}
-    th, td {{
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      white-space: nowrap;
-      vertical-align: top;
-    }}
-    thead th {{
-      position: sticky;
-      top: 0;
-      background: #0b1220;
-      z-index: 1;
-    }}
-
-    /* 코드 블록 */
-    pre, code {{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 13px;
-    }}
-    pre {{
-      margin: 0;
-      padding: 12px;
-      background: #0b1220;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: auto;
-    }}
-
-    .pill {{
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 12px;
-    }}
-
-    .badge {{
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      line-height: 20px;
-      border: 1px solid var(--border);
-      color: #fff;
-    }}
-    .ok  {{ background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.35); color: #a7f3d0; }}
-    .err {{ background: rgba(239,68,68,.15);  border-color: rgba(239,68,68,.35); color: #fecaca; }}
-
-    a {{ color: var(--accent); text-decoration: none; }}
-    a:hover {{ text-decoration: underline; }}
-
-    footer {{
-      margin: 24px 0 8px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-
-    @media (max-width: 520px) {{
-      th, td {{ padding: 8px 10px; }}
-    }}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{escape(title)}</title>
+<style>{CSS}</style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>{escape(title)}</h1>
-      <p>Text2SQL Evaluation Dashboard</p>
+      <p class="sub">Compare LLM Text2SQL results across <b>llama</b>, <b>chatgpt</b>, <b>genie</b></p>
     </header>
     {body}
-    <footer>Generated {ts}</footer>
+    <footer>Generated {now_utc_str()}</footer>
   </div>
 </body>
-</html>
-"""
+</html>"""
 
-
-# ---------- helpers ----------
-def read_reports() -> List[Dict[str, Any]]:
-    reports = []
-    if not OUT_DIR.exists():
-        return reports
-    for p in sorted(OUT_DIR.glob("*.json")):
-        try:
-            data = json.loads(p.read_text(encoding="utf-8"))
-            reports.append({"path": p, "data": data})
-        except Exception:
-            continue
-    return reports
-
-
-def fmt_pct(n: int, d: int) -> str:
-    if d <= 0:
-        return "0%"
-    return f"{(n/d)*100:.1f}%"
-
-
-def summarize_report(rep: Dict[str, Any]) -> Dict[str, Any]:
-    data = rep["data"]
-    results = data.get("results", [])
-    passed = sum(1 for r in results if (r.get("passed_all") is True))
-    total = len(results)
-    return {
-        "file": rep["path"].name,
-        "passed": passed,
-        "total": total,
-        "rate": fmt_pct(passed, total),
-    }
-
-
-def html_summary_table(reports: List[Dict[str, Any]]) -> str:
-    rows = [summarize_report(r) for r in reports]
-    if not rows:
-        return "<p class='pill'>No reports found in ./out</p>"
-    trs = "\n".join(
-        f"<tr><td>{escape(r['file'])}</td>"
-        f"<td>{r['passed']}/{r['total']}</td>"
-        f"<td>{r['rate']}</td></tr>"
-        for r in rows
-    )
-    return f"""
-<div class="table-wrap">
-<table>
-  <thead><tr><th>Report</th><th>Passed</th><th>Pass Rate</th></tr></thead>
-  <tbody>
-    {trs}
-  </tbody>
-</table>
-</div>
-"""
-
-
-def html_artifacts(reports: List[Dict[str, Any]]) -> str:
+def summary_cards(reports: List[Dict[str, Any]]) -> str:
     if not reports:
-        return "<p class='pill'>No artifacts</p>"
-    lis = "\n".join(
-        f"<li><a href='../out/{escape(r['path'].name)}' target='_blank' rel='noopener'>{escape(r['path'].name)}</a></li>"
+        return "<div class='card'><h2>Summary</h2><p class='pill'>No reports in <code>site/out</code></p></div>"
+    rows = [summarize_one(r) for r in reports]
+    # 모델별로 최신 1개만 보여주되(동명이 여럿이면 전부 보여도 무방)
+    htmls = []
+    for m in MODEL_KEYS:
+        ms = [r for r in rows if r["model"] == m]
+        if not ms:
+            htmls.append(f"<div class='card'><h2>{m}</h2><p class='pill'>No report</p></div>")
+            continue
+        r = ms[-1]
+        rate = pct(r["passed"], r["total"])
+        metric_lines = []
+        for k, v in sorted(r["metric_pass"].items()):
+            metric_lines.append(f"<li>{escape(k)}: {v['pass']}/{v['total']} ({pct(v['pass'], v['total'])})</li>")
+        htmls.append(
+            f"<div class='card'><h2>{m}</h2>"
+            f"<div class='kv'><span class='badge'>file: {escape(r['file'])}</span>"
+            f"<span class='badge'>passed: {r['passed']} / {r['total']}</span>"
+            f"<span class='badge'>rate: {rate}</span></div>"
+            f"<div class='sub'>by metric</div>"
+            f"<ul>{''.join(metric_lines) or '<li>—</li>'}</ul>"
+            f"</div>"
+        )
+    return f"<div class='grid'>{''.join(htmls)}</div>"
+
+def artifacts_list(reports: List[Dict[str, Any]]) -> str:
+    if not reports:
+        return ""
+    items = "\n".join(
+        f"<li><a href='out/{escape(r['path'].name)}' target='_blank' rel='noopener'>{escape(r['path'].name)}</a> <span class='pill'>{escape(r['model'])}</span></li>"
         for r in reports
     )
-    return f"<ul>{lis}</ul>"
+    return f"<div class='card'><h2>Artifacts</h2><ul>{items}</ul></div>"
 
+def index_by_id(rep: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in rep["data"].get("results", []):
+        qid = str(r.get("id", ""))
+        if qid:
+            out[qid] = r
+    return out
 
-def html_results_table(rep: Dict[str, Any]) -> str:
-    data = rep["data"]
-    results = data.get("results", [])
-    if not results:
-        return "<p class='pill'>No test results</p>"
-
-    def metric_badge(m: Dict[str, Any]) -> str:
-        name = m.get("name", "")
-        score = m.get("score", None)
-        thr = m.get("threshold", None)
-        reason = m.get("reason", "")
-        ok = score is not None and thr is not None and score >= thr
+def metric_badges(r: Dict[str, Any]) -> str:
+    badges = []
+    for m in r.get("metrics", []):
+        name = str(m.get("name",""))
+        score = m.get("score")
+        thr = m.get("threshold")
+        ok = False
+        if score is not None and thr is not None:
+            try:
+                ok = float(score) >= float(thr)
+            except Exception:
+                ok = False
         label = f"{name}: {score if score is not None else '—'} / {thr if thr is not None else '—'}"
-        title = escape(reason or "")
-        cls = "ok" if ok else "err"
-        return f"<span class='badge {cls}' title='{title}'>{escape(label)}</span>"
+        badges.append(f"<span class='badge {'ok' if ok else 'err'}' title='{escape(str(m.get('reason','')))}'>{escape(label)}</span>")
+    return " ".join(badges)
 
-    trs = []
-    for r in results:
-        qid = escape(str(r.get("id", "")))
-        q = escape(str(r.get("question", "")))
-        pred = escape(str(r.get("pred_sql", "")))
-        passed_all = r.get("passed_all") is True
-        passed_badge = "<span class='badge ok'>PASS</span>" if passed_all else "<span class='badge err'>FAIL</span>"
-        metrics_html = " ".join(metric_badge(m) for m in r.get("metrics", []))
-        trs.append(
-            f"<tr>"
-            f"<td style='min-width:80px'>{qid}<br/>{passed_badge}</td>"
-            f"<td style='min-width:260px'>{q}</td>"
-            f"<td><pre>{pred}</pre></td>"
-            f"<td>{metrics_html}</td>"
-            f"</tr>"
-        )
-
-    return f"""
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>ID</th><th>Question</th><th>Pred SQL</th><th>Metrics</th></tr>
-  </thead>
-  <tbody>
-    {''.join(trs)}
-  </tbody>
-</table>
-</div>
-"""
-
-
-def build_body(reports: List[Dict[str, Any]]) -> str:
-    # 상단: Summary / Artifacts 카드 (그리드)
-    top = f"""
-<div class="grid">
-  <div class="card">
-    <h2>Summary</h2>
-    {html_summary_table(reports)}
-  </div>
-  <div class="card">
-    <h2>Artifacts</h2>
-    {html_artifacts(reports)}
-  </div>
-</div>
-"""
-
-    # 하단: 각 리포트별 Results 카드
-    sections = []
+def compare_section(reports: List[Dict[str, Any]]) -> str:
+    # 모델별 인덱스
+    idx: Dict[str, Dict[str, Any]] = {}
     for rep in reports:
-        title = escape(rep["path"].name)
-        sections.append(
-            f"""
-<div class="card" style="margin-top:16px;">
-  <h2>{title}</h2>
-  {html_results_table(rep)}
-</div>
-"""
-        )
+        if rep["model"] in MODEL_KEYS:
+            idx[rep["model"]] = index_by_id(rep)
 
-    if not sections:
-        sections.append(
-            """
-<div class="card" style="margin-top:16px;">
-  <h2>Results</h2>
-  <p class="pill">아직 생성된 평가 리포트가 없습니다. <code>out/*.json</code>을 만들어주세요.</p>
-</div>
-"""
-        )
+    # 모든 질문 id 합집합
+    all_ids = set()
+    for m in MODEL_KEYS:
+        if m in idx:
+            all_ids.update(idx[m].keys())
+    all_ids = sorted(all_ids, key=lambda x: (re.sub(r"[^0-9]", "", x) or "999999", x))
 
-    return top + "\n".join(sections)
+    if not all_ids:
+        return "<div class='card'><h2>Results</h2><p class='pill'>No comparable results found</p></div>"
 
+    sections = []
+    # 질문별 3-컬럼 비교 카드
+    for qid in all_ids:
+        # 질문 텍스트는 아무 모델에서나 먼저 찾음
+        question = ""
+        for m in MODEL_KEYS:
+            r = idx.get(m, {}).get(qid)
+            if r and r.get("question"):
+                question = r["question"]
+                break
+        header = f"<div class='sub'>{escape(qid)}</div><h2 style='margin-top:4px'>{escape(question or '(no question)')}</h2>"
+
+        cols = []
+        for m in MODEL_KEYS:
+            r = idx.get(m, {}).get(qid)
+            if not r:
+                cols.append(f"<div class='model-card'><h3>{m}</h3><div class='pill'>No result</div></div>")
+                continue
+            passed = r.get("passed_all") is True
+            pred = str(r.get("pred_sql",""))
+            cols.append(
+                f"<div class='model-card'>"
+                f"<h3>{m} {'<span class=\"badge ok\">PASS</span>' if passed else '<span class=\"badge err\">FAIL</span>'}</h3>"
+                f"<div class='kv'>{metric_badges(r)}</div>"
+                f"<pre>{escape(pred)}</pre>"
+                f"</div>"
+            )
+        body = f"<div class='model-3col'>{''.join(cols)}</div>"
+        sections.append(f"<div class='card'>{header}{body}</div>")
+
+    return "\n".join(sections)
+
+# ---- main ------------------------------------------------------------------
 
 def main() -> None:
     SITE_DIR.mkdir(parents=True, exist_ok=True)
-    reports = read_reports()
-    body = build_body(reports)
-    html = base_html(TITLE, body)
-    out_path = SITE_DIR / "index.html"
-    out_path.write_text(html, encoding="utf-8")
-    print(f"✅ Site generated at: {out_path.resolve()}")
-    print("Open ./site/index.html")
+    copy_reports_into_site()  # copy out/*.json -> site/out/*.json
+    reports = load_reports()
 
+    body = summary_cards(reports)
+    body += artifacts_list(reports)
+    body += compare_section(reports)
+
+    html = base_html(TITLE, body)
+    (SITE_DIR / "index.html").write_text(html, encoding="utf-8")
+    (SITE_DIR / ".nojekyll").write_text("", encoding="utf-8")
+    print(f"✅ Site generated at: { (SITE_DIR / 'index.html').resolve() }")
 
 if __name__ == "__main__":
     main()
