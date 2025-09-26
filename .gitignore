@@ -43,8 +43,8 @@ coverage.xml
 htmlcov/
 
 # --- Project outputs -------------------------------------------------
-out/**
-!out/.gitkeep
+#out/**
+#!out/.gitkeep
 
 # --- Data files (generated DB 등) -----------------------------------
 data/*.db
