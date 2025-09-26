@@ -45,15 +45,28 @@ jobs:
           uv venv
           uv sync
 
-      # 샘플 SQLite DB는 로컬용이지만, 문제없으니 생성해 둠(선택)
-      - name: Prepare sample SQLite DB
-        run: uv run python scripts/setup_db.py
-
       # dbt를 duckdb 타겟으로 빌드/문서 생성 (colibri가 duckdb만 지원)
+      - name: Build NYC DuckDB dataset (nyc.trips_small)
+        if: ${{ matrix.profile == 'duckdb' }}
+        env:
+          DUCKDB_PATH: data/nyc_taxi.duckdb
+        run: |
+          mkdir -p data
+          uv run python scripts/nyc_to_duckdb.py
+          # sanity check: 테이블 존재/카운트 확인
+          python - <<'PY'
+      import duckdb
+      con = duckdb.connect('data/nyc_taxi.duckdb')
+      print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
+      print('count trips_small:', con.sql("select count(*) from nyc.trips_small").fetchall())
+      PY
+
       - name: Build dbt artifacts (duckdb)
+        if: ${{ matrix.profile == 'duckdb' }}
         env:
           DBT_ROOT: ${{ github.workspace }}
           DBT_PROFILES_DIR: ./dbt
+          DUCKDB_PATH: data/nyc_taxi.duckdb   # profiles.yml 기본값과 일치
         run: |
           uv run dbt build --project-dir dbt --target duck
           uv run dbt compile --project-dir dbt --target duck
