@@ -1,4 +1,4 @@
-name: Build & Deploy dbt-colibri to Pages
+name: Build & Deploy Text2SQL site (eval + lineage)
 
 on:
   push:
@@ -35,61 +35,60 @@ jobs:
 
       - name: Install uv
         run: |
-          pipx install uv
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
+          python -m pip install --upgrade pip
+          python -m pip install --user uv
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Sync deps
         run: |
           uv venv
           uv sync
+          # duckdb 런타임 보장 (pyproject에 있으면 생략 가능)
+          uv pip install duckdb
 
-      # DuckDB DB 생성 (nyc.trips_small) + 간단 검증
-      - name: Build NYC DuckDB dataset (nyc.trips_small)
+      # 1) DuckDB 데이터셋 생성 (nyc.trips_small)
+      - name: Build NYC DuckDB dataset
         env:
           DUCKDB_PATH: data/nyc_taxi.duckdb
         shell: bash
         run: |
           mkdir -p data
           uv run python scripts/sync_to_duckdb.py
-          # ✅ run sanity check inside uv env as well
-          uv run python - <<'PY'
+          python - <<'PY'
           import duckdb
           con = duckdb.connect('data/nyc_taxi.duckdb')
           print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
           print('count trips_small:', con.sql("select count(*) from nyc.trips_small").fetchall())
           PY
 
-
-      # dbt를 DuckDB 타겟으로 빌드/문서 생성
+      # 2) dbt (DuckDB 타겟) 빌드 & 문서 & colibri
       - name: Build dbt artifacts (duckdb)
         env:
           DBT_ROOT: ${{ github.workspace }}
           DBT_PROFILES_DIR: ./dbt
-          DUCKDB_PATH: data/nyc_taxi.duckdb   # profiles.yml의 default와 일치해야 함
+          DUCKDB_PATH: data/nyc_taxi.duckdb
         run: |
           uv run dbt build --project-dir dbt --target duck
           uv run dbt compile --project-dir dbt --target duck
           uv run dbt docs generate --project-dir dbt --target duck
 
-      # colibri로 리니지 사이트 생성 (dbt/dist)
       - name: Generate colibri site
         working-directory: dbt
-        run: uv run colibri generate
+        run: uv run colibri generate --output-dir dist
 
-      # Pages 아티팩트 업로드 (dbt/dist 전체)
+      # 3) 평가 리포트 대시보드 + colibri를 단일 사이트로 합치기
+      - name: Build evaluation site
+        run: |
+          uv run python scripts/build_site.py
+          mkdir -p site/colibri
+          cp -r dbt/dist/* site/colibri/
+
+      # 4) Pages 업로드 & 배포 (site/ 폴더 전체)
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dbt/dist
+          path: site
 
-      # Pages 배포
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
