@@ -1,63 +1,727 @@
 <!doctype html>
 <html lang="ko">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Text2SQL – Model Comparison (llama · chatgpt · genie)</title>
-<style>
-:root{--bg:#0b0f14;--panel:#0f172a;--card:#0f1321;--text:#e5e7eb;--muted:#94a3b8;
---accent:#22d3ee;--border:#1f2937;--ok:#10b981;--err:#ef4444}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#0f172a 0,var(--bg) 60%);
-color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',Arial,'Apple SD Gothic Neo','맑은 고딕',sans-serif}
-.container{width:min(1180px,100% - 2rem);margin:32px auto}
-header{text-align:center;margin-bottom:24px}
-header h1{margin:0 0 6px;font-size:clamp(20px,3vw,30px)}
-header p{margin:0;color:var(--muted);font-size:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.card{background:linear-gradient(180deg,var(--panel),var(--card));border:1px solid var(--border);
-border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.02)}
-.card h2{margin:0 0 10px;font-size:clamp(16px,2.2vw,20px)}
-.sub{color:var(--muted);font-size:12px}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;line-height:20px;border:1px solid var(--border)}
-.ok{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35);color:#a7f3d0}
-.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#fecaca}
-.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:12px}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px;background:var(--panel);
-border:1px solid var(--border);border-radius:12px}
-th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
-thead th{position:sticky;top:0;background:#0b1220;z-index:1}
-pre,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:13px}
-pre{margin:0;padding:12px;background:#0b1220;border:1px solid var(--border);border-radius:12px;overflow:auto;white-space:pre-wrap}
-.model-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-@media (max-width:980px){.model-3col{grid-template-columns:1fr}}
-.model-card{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:12px}
-.model-card h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
-.kv{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
-.kv .badge{background:#0b1220}
-ul{margin:0;padding-left:18px}
-footer{margin:24px 0 8px;text-align:center;color:var(--muted);font-size:12px}
-</style>
-</head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Text2SQL — Model Comparison Dashboard</title>
+
+    <style>
+      :root { --bg:#0b0f14; --card:#111827; --muted:#9CA3AF; --fg:#E5E7EB; --pill:#374151; --ok:#10B981; --fail:#EF4444; --unk:#6B7280; --accent:#60A5FA; }
+      * { box-sizing: border-box; }
+      html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu; }
+      a { color: var(--accent); text-decoration: none; }
+      .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+      header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 18px; }
+      header .title { font-size: 22px; font-weight: 700; letter-spacing:.2px; }
+      header .links { display:flex; gap:10px; flex-wrap:wrap; }
+      .btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background:#0f172a; border:1px solid #1f2937; color:#e5e7eb; font-size:13px; }
+      .btn:hover { background:#111827; }
+      .meta { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+
+      .nav { display:flex; gap:8px; flex-wrap:wrap; margin: 8px 0 22px; }
+      .chip { background:#0f172a; border:1px solid #1f2937; color:#cbd5e1; font-size:12px; padding:6px 10px; border-radius:999px; }
+      .chip:hover { background:#111827; }
+
+      section.case { background: #0c1220; border: 1px solid #1f2937; border-radius: 16px; padding:16px; margin: 14px 0 24px; }
+      section .q { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
+
+      .gold-wrap { display:grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 12px; }
+      @media(min-width: 720px) { .gold-wrap { grid-template-columns: repeat(2, 1fr); } }
+
+      .grid { display:grid; gap: 12px; grid-template-columns: 1fr; }
+      @media(min-width: 820px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+      .card { background: var(--card); border:1px solid #1f2937; border-radius: 14px; padding: 12px; }
+      .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px; }
+      .card .model { font-weight: 700; letter-spacing: .2px; }
+      .pill { font-size:11px; padding:3px 8px; border-radius: 999px; border:1px solid var(--pill); color:#e5e7eb; }
+      .pill.pass { border-color: var(--ok); color: var(--ok); }
+      .pill.fail { border-color: var(--fail); color: var(--fail); }
+
+      .code-card { background:#0b1220; border:1px solid #1f2937; border-radius: 12px; }
+      .code-card + .code-card { margin-top: 8px; }
+      .code-card-head { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid #1f2937; color:#cbd5e1; font-size:12px; }
+      .copy { background:#0f172a; border:1px solid #334155; color:#cbd5e1; padding:6px 10px; border-radius: 8px; font-size:12px; cursor:pointer; }
+      .copy:hover { background:#111827; }
+      pre { margin:0; padding:12px; overflow:auto; font-size:13px; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+      .metrics { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+      .metric { display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; }
+      .metric .metric-name { min-width: 140px; color:#e5e7eb; font-weight:600; }
+      .metric .metric-icon { width:18px; text-align:center; }
+      .metric.ok .metric-icon { color: var(--ok); }
+      .metric.fail .metric-icon { color: var(--fail); }
+      .metric.unk .metric-icon { color: var(--unk); }
+      .metric .metric-score { font-variant-numeric: tabular-nums; }
+      .metric .metric-thr { color: #94a3b8; font-variant-numeric: tabular-nums; }
+      .metric .metric-reason { color:#9ca3af; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+      .code-card .muted, .card .muted { color: var(--muted); padding: 10px; }
+      footer { margin-top: 40px; color: #9CA3AF; font-size: 12px; text-align:center; }
+    </style>
+    
 <body>
   <div class="container">
     <header>
-      <h1>Text2SQL – Model Comparison (llama · chatgpt · genie)</h1>
-      <p class="sub">Compare LLM Text2SQL results across <b>llama</b>, <b>chatgpt</b>, <b>genie</b></p>
+      <div class="title">Text2SQL — Model Comparison</div>
+      <div class="links">
+        <a class="btn" href="https://github.com/kyungjunleeme/Text2SQL" target="_blank">GitHub</a>
+        <a class="btn" href="./colibri/" target="_blank">Open Lineage (colibri)</a>
+      </div>
     </header>
-    <div class='grid'><div class='card'><h2>llama</h2><div class='kv'><span class='badge'>file: nyc_llama_report.json</span><span class='badge'>passed: 2 / 5</span><span class='badge'>rate: 40.0%</span></div><div class='sub'>by metric</div><ul><li>component_match_sql: 3/5 (60.0%)</li><li>executable_sql: 4/5 (80.0%)</li><li>execution_accuracy: 2/5 (40.0%)</li><li>semantic_match_sql: 1/5 (20.0%)</li></ul></div><div class='card'><h2>chatgpt</h2><p class='pill'>No report</p></div><div class='card'><h2>genie</h2><p class='pill'>No report</p></div></div><div class='card'><h2>Artifacts</h2><ul><li><a href='out/nyc_duckdb_report.json' target='_blank' rel='noopener'>nyc_duckdb_report.json</a> <span class='pill'>other</span></li>
-<li><a href='out/nyc_llama_report.json' target='_blank' rel='noopener'>nyc_llama_report.json</a> <span class='pill'>llama</span></li>
-<li><a href='out/sqlite_report.json' target='_blank' rel='noopener'>sqlite_report.json</a> <span class='pill'>other</span></li></ul></div><div class='card'><div class='sub'>q1</div><h2 style='margin-top:4px'>픽업 동네별(nyc.trips_small.pickup_ntaname) 트립 수 Top 10</h2><div class='model-3col'><div class='model-card'><h3>llama <span class="badge err">FAIL</span></h3><div class='kv'><span class='badge ok' title='ok'>executable_sql: 1.0 / 1.0</span> <span class='badge err' title='mismatch(all candidates)'>execution_accuracy: 0.0 / 1.0</span> <span class='badge err' title='different'>semantic_match_sql: 0.0 / 1.0</span> <span class='badge ok' title='weighted jaccard; best=0.950'>component_match_sql: 0.9500000000000001 / 0.85</span></div><pre>SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; &#x27;&#x27; GROUP BY 1 ORDER BY cnt DESC;</pre></div><div class='model-card'><h3>chatgpt</h3><div class='pill'>No result</div></div><div class='model-card'><h3>genie</h3><div class='pill'>No result</div></div></div></div>
-<div class='card'><div class='sub'>q2</div><h2 style='margin-top:4px'>승객 수(passenger_count)별 평균 total_amount를 내림차순</h2><div class='model-3col'><div class='model-card'><h3>llama <span class="badge err">FAIL</span></h3><div class='kv'><span class='badge ok' title='ok'>executable_sql: 1.0 / 1.0</span> <span class='badge err' title='mismatch(all candidates)'>execution_accuracy: 0.0 / 1.0</span> <span class='badge err' title='different'>semantic_match_sql: 0.0 / 1.0</span> <span class='badge err' title='weighted jaccard; best=0.675'>component_match_sql: 0.675 / 0.85</span></div><pre>SELECT passenger_count, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE passenger_count IS NOT NULL  GROUP BY  1 ORDER BY cnt DESC;</pre></div><div class='model-card'><h3>chatgpt</h3><div class='pill'>No result</div></div><div class='model-card'><h3>genie</h3><div class='pill'>No result</div></div></div></div>
-<div class='card'><div class='sub'>q3</div><h2 style='margin-top:4px'>2015년 1~3월 월별 trip_distance 합계</h2><div class='model-3col'><div class='model-card'><h3>llama <span class="badge err">FAIL</span></h3><div class='kv'><span class='badge err' title='exec error: Binder Error: Referenced column &quot;cnt&quot; not found in FROM clause!
-Candidate bindings: &quot;pickup_ntaname&quot;, &quot;payment_type&quot;, &quot;extra&quot;
+
+    <div class="meta">Built at 2025-09-26 10:58 UTC. Reports loaded: <code>nyc_duckdb_report.json</code> <code>nyc_llama_report.json</code> <code>sqlite_report.json</code> </div>
+
+    <div class="nav"><a class="chip" href="#q1">픽업 동네별(nyc.trips_small.pickup_ntaname) 트…</a><a class="chip" href="#q2">승객 수(passenger_count)별 평균 total_amount를 …</a><a class="chip" href="#q3">2015년 1~3월 월별 trip_distance 합계</a><a class="chip" href="#q4">팁 비율(tip_amount/total_amount) 상위 20건의 pi…</a><a class="chip" href="#q5">결제수단(payment_type)별 평균 total_amount와 건수</a></div>
+
+    
+      <section class="case" id="q1">
+        <h3 class="q">Q. 픽업 동네별(nyc.trips_small.pickup_ntaname) 트립 수 Top 10</h3>
+        <div class="gold-wrap">
+          
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span>Gold SQL #1</span>
+                  <button class="copy" data-copy="SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY 2 DESC LIMIT 10">Copy</button>
+                </div>
+                <pre><code>SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY 2 DESC LIMIT 10</code></pre>
+              </div>
+            
+        </div>
+        <div class="grid">
+          
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Model</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">0.950</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.950</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Llama</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT pickup_ntaname, COUNT(*) AS cnt FROM nyc.trips_small WHERE pickup_ntaname IS NOT NULL AND pickup_ntaname &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">0.950</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.950</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">sqlite_report</div>
+              <div class="pill pass">ALL PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT d.name AS dept, COUNT(e.id) AS cnt FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY d.name ASC">Copy</button>
+              </div>
+              <pre><code>SELECT d.name AS dept, COUNT(e.id) AS cnt FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY d.name ASC</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">match(candidate)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">0.883</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.883</span>
+      </div>
+            </div>
+          </div>
+        
+        </div>
+      </section>
+    
+
+      <section class="case" id="q2">
+        <h3 class="q">Q. 승객 수(passenger_count)별 평균 total_amount를 내림차순</h3>
+        <div class="gold-wrap">
+          
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span>Gold SQL #1</span>
+                  <button class="copy" data-copy="SELECT passenger_count, AVG(total_amount) AS avg_total FROM nyc.trips_small GROUP BY 1 ORDER BY 2 DESC">Copy</button>
+                </div>
+                <pre><code>SELECT passenger_count, AVG(total_amount) AS avg_total FROM nyc.trips_small GROUP BY 1 ORDER BY 2 DESC</code></pre>
+              </div>
+            
+        </div>
+        <div class="grid">
+          
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Model</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT passenger_count, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE passenger_count IS NOT NULL  GROUP BY  1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT passenger_count, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE passenger_count IS NOT NULL  GROUP BY  1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.675</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.675</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Llama</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT passenger_count, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE passenger_count IS NOT NULL  GROUP BY  1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT passenger_count, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE passenger_count IS NOT NULL  GROUP BY  1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.675</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.675</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">sqlite_report</div>
+              <div class="pill pass">ALL PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT d.name AS dept, AVG(e.salary) AS avg_salary FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY avg_salary DESC">Copy</button>
+              </div>
+              <pre><code>SELECT d.name AS dept, AVG(e.salary) AS avg_salary FROM employees e JOIN departments d ON e.dept_id = d.id GROUP BY d.name ORDER BY avg_salary DESC</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">match(candidate)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">equal(any candidate)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=1.000</span>
+      </div>
+            </div>
+          </div>
+        
+        </div>
+      </section>
+    
+
+      <section class="case" id="q3">
+        <h3 class="q">Q. 2015년 1~3월 월별 trip_distance 합계</h3>
+        <div class="gold-wrap">
+          
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span>Gold SQL #1</span>
+                  <button class="copy" data-copy="SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY 1">Copy</button>
+                </div>
+                <pre><code>SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY 1</code></pre>
+              </div>
+            
+        </div>
+        <div class="grid">
+          
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Model</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric fail" title="fail">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">exec error: Binder Error: Referenced column "cnt" not found in FROM clause!
+Candidate bindings: "pickup_ntaname", "payment_type", "extra"
 
 LINE 1: ...(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;
-                                                                       ^'>executable_sql: 0.0 / 1.0</span> <span class='badge err' title='mismatch(all candidates)'>execution_accuracy: 0.0 / 1.0</span> <span class='badge err' title='different'>semantic_match_sql: 0.0 / 1.0</span> <span class='badge ok' title='weighted jaccard; best=0.950'>component_match_sql: 0.9500000000000001 / 0.85</span></div><pre>SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;</pre></div><div class='model-card'><h3>chatgpt</h3><div class='pill'>No result</div></div><div class='model-card'><h3>genie</h3><div class='pill'>No result</div></div></div></div>
-<div class='card'><div class='sub'>q4</div><h2 style='margin-top:4px'>팁 비율(tip_amount/total_amount) 상위 20건의 pickup/dropoff 동네</h2><div class='model-3col'><div class='model-card'><h3>llama <span class="badge ok">PASS</span></h3><div class='kv'><span class='badge ok' title='ok'>executable_sql: 1.0 / 1.0</span> <span class='badge ok' title='match(candidate)'>execution_accuracy: 1.0 / 1.0</span> <span class='badge ok' title='equal(any candidate)'>semantic_match_sql: 1.0 / 1.0</span> <span class='badge ok' title='weighted jaccard; best=1.000'>component_match_sql: 1.0 / 0.85</span></div><pre>SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount &gt; 0 ORDER BY tip_ratio DESC LIMIT 20;</pre></div><div class='model-card'><h3>chatgpt</h3><div class='pill'>No result</div></div><div class='model-card'><h3>genie</h3><div class='pill'>No result</div></div></div></div>
-<div class='card'><div class='sub'>q5</div><h2 style='margin-top:4px'>결제수단(payment_type)별 평균 total_amount와 건수</h2><div class='model-3col'><div class='model-card'><h3>llama <span class="badge ok">PASS</span></h3><div class='kv'><span class='badge ok' title='ok'>executable_sql: 1.0 / 1.0</span> <span class='badge ok' title='match(candidate)'>execution_accuracy: 1.0 / 1.0</span> <span class='badge err' title='different'>semantic_match_sql: 0.0 / 1.0</span> <span class='badge err' title='weighted jaccard; best=0.800'>component_match_sql: 0.8 / 0.85</span></div><pre>SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE payment_type IS NOT NULL AND payment_type &lt;&gt; &#x27;&#x27; GROUP BY 1 ORDER BY cnt DESC;</pre></div><div class='model-card'><h3>chatgpt</h3><div class='pill'>No result</div></div><div class='model-card'><h3>genie</h3><div class='pill'>No result</div></div></div></div>
-    <footer>Generated 2025-09-26 10:44:12 UTC</footer>
+                                                                       ^</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">0.950</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.950</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Llama</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT EXTRACT(MONTH FROM pickup_datetime) AS mon, SUM(trip_distance) AS dist FROM nyc.trips_small WHERE EXTRACT(YEAR FROM pickup_datetime)=2015 AND EXTRACT(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric fail" title="fail">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">exec error: Binder Error: Referenced column "cnt" not found in FROM clause!
+Candidate bindings: "pickup_ntaname", "payment_type", "extra"
+
+LINE 1: ...(MONTH FROM pickup_datetime) IN (1,2,3) GROUP BY 1 ORDER BY cnt DESC;
+                                                                       ^</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">0.950</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.950</span>
+      </div>
+            </div>
+          </div>
+        
+        </div>
+      </section>
+    
+
+      <section class="case" id="q4">
+        <h3 class="q">Q. 팁 비율(tip_amount/total_amount) 상위 20건의 pickup/dropoff 동네</h3>
+        <div class="gold-wrap">
+          
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span>Gold SQL #1</span>
+                  <button class="copy" data-copy="SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount&gt;0 ORDER BY tip_ratio DESC LIMIT 20">Copy</button>
+                </div>
+                <pre><code>SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount&gt;0 ORDER BY tip_ratio DESC LIMIT 20</code></pre>
+              </div>
+            
+        </div>
+        <div class="grid">
+          
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Model</div>
+              <div class="pill fail">NOT PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount &gt; 0 ORDER BY tip_ratio DESC LIMIT 20;">Copy</button>
+              </div>
+              <pre><code>SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount &gt; 0 ORDER BY tip_ratio DESC LIMIT 20;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">mismatch(all candidates)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">equal(any candidate)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=1.000</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Llama</div>
+              <div class="pill pass">ALL PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount &gt; 0 ORDER BY tip_ratio DESC LIMIT 20;">Copy</button>
+              </div>
+              <pre><code>SELECT pickup_ntaname, dropoff_ntaname, tip_amount/NULLIF(total_amount,0) AS tip_ratio FROM nyc.trips_small WHERE total_amount &gt; 0 ORDER BY tip_ratio DESC LIMIT 20;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">match(candidate)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">equal(any candidate)</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=1.000</span>
+      </div>
+            </div>
+          </div>
+        
+        </div>
+      </section>
+    
+
+      <section class="case" id="q5">
+        <h3 class="q">Q. 결제수단(payment_type)별 평균 total_amount와 건수</h3>
+        <div class="gold-wrap">
+          
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span>Gold SQL #1</span>
+                  <button class="copy" data-copy="SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small GROUP BY 1 ORDER BY 3 DESC">Copy</button>
+                </div>
+                <pre><code>SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small GROUP BY 1 ORDER BY 3 DESC</code></pre>
+              </div>
+            
+        </div>
+        <div class="grid">
+          
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Model</div>
+              <div class="pill pass">ALL PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE payment_type IS NOT NULL AND payment_type &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE payment_type IS NOT NULL AND payment_type &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">match(candidate)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.800</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.800</span>
+      </div>
+            </div>
+          </div>
+        
+          <div class="card">
+            <div class="card-head">
+              <div class="model">Llama</div>
+              <div class="pill pass">ALL PASS</div>
+            </div>
+            <div class="code-card">
+              <div class="code-card-head">
+                <span>Prediction</span>
+                <button class="copy" data-copy="SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE payment_type IS NOT NULL AND payment_type &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;">Copy</button>
+              </div>
+              <pre><code>SELECT payment_type, AVG(total_amount) AS avg_total, COUNT(*) AS cnt FROM nyc.trips_small WHERE payment_type IS NOT NULL AND payment_type &lt;&gt; '' GROUP BY 1 ORDER BY cnt DESC;</code></pre>
+            </div>
+            <div class="metrics">
+              <div class="metric ok" title="pass">
+        <span class="metric-name">executable_sql</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">ok</span>
+      </div>
+<div class="metric ok" title="pass">
+        <span class="metric-name">execution_accuracy</span>
+        <span class="metric-icon">✓</span>
+        <span class="metric-score">1.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">match(candidate)</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">semantic_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.000</span>
+        <span class="metric-thr">/ 1.000</span>
+        <span class="metric-reason">different</span>
+      </div>
+<div class="metric fail" title="fail">
+        <span class="metric-name">component_match_sql</span>
+        <span class="metric-icon">✗</span>
+        <span class="metric-score">0.800</span>
+        <span class="metric-thr">/ 0.850</span>
+        <span class="metric-reason">weighted jaccard; best=0.800</span>
+      </div>
+            </div>
+          </div>
+        
+        </div>
+      </section>
+    
+
+    <footer>
+      Generated from ./out/*.json — each case shows Gold SQL and model predictions.<br/>
+      Use the chips to jump between questions. Click “Copy” to copy SQL.
+    </footer>
   </div>
+  
+    <script>
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy');
+      if (!btn) return;
+      const text = btn.getAttribute('data-copy') || '';
+      navigator.clipboard.writeText(text.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&amp;','&'))
+        .then(() => { btn.textContent = 'Copied'; setTimeout(()=>btn.textContent='Copy', 1200); })
+        .catch(() => { btn.textContent = 'Error'; setTimeout(()=>btn.textContent='Copy', 1200); });
+    });
+    </script>
+    
 </body>
 </html>
