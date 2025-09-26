@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p data
           uv run python scripts/sync_to_duckdb.py
-          python - <<'PY'
+          uv run python - <<'PY'
           import duckdb
           con = duckdb.connect('data/nyc_taxi.duckdb')
           print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
