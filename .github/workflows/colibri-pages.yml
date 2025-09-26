@@ -54,15 +54,18 @@ jobs:
       - name: Build NYC DuckDB dataset (nyc.trips_small)
         env:
           DUCKDB_PATH: data/nyc_taxi.duckdb
+        shell: bash
         run: |
           mkdir -p data
           uv run python scripts/sync_to_duckdb.py
-          python - <<'PY'
+          # ✅ run sanity check inside uv env as well
+          uv run python - <<'PY'
           import duckdb
           con = duckdb.connect('data/nyc_taxi.duckdb')
           print('tables:', con.sql("select table_schema, table_name from information_schema.tables where table_schema='nyc'").fetchall())
           print('count trips_small:', con.sql("select count(*) from nyc.trips_small").fetchall())
           PY
+
 
       # dbt를 DuckDB 타겟으로 빌드/문서 생성
       - name: Build dbt artifacts (duckdb)
