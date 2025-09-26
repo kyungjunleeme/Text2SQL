@@ -1,0 +1,1001 @@
+{
+  "metadata": {
+    "colibri_version": "0.2.5",
+    "generated_at": "2025-09-26T09:43:35Z",
+    "adapter_type": "duckdb",
+    "dbt_version": "1.10.11",
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "dbt_invocation_id": "38b2af94-fb49-4c56-9fdb-128eff5f7e82",
+    "dbt_project_name": "tsql_eval_dbt",
+    "dbt_project_id": "5a92bff6461b95818f266a4c75eb91eb"
+  },
+  "nodes": {
+    "seed.tsql_eval_dbt.departments": {
+      "id": "seed.tsql_eval_dbt.departments",
+      "name": "departments",
+      "fullName": "seed.tsql_eval_dbt.departments",
+      "nodeType": "seed",
+      "materialized": "seed",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main",
+      "path": "seeds/departments.csv",
+      "description": "",
+      "contractEnforced": false,
+      "rawCode": null,
+      "compiledCode": null,
+      "refs": [],
+      "columns": {
+        "id": {
+          "columnName": "id",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        },
+        "name": {
+          "columnName": "name",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.stg_departments": {
+      "id": "model.tsql_eval_dbt.stg_departments",
+      "name": "stg_departments",
+      "fullName": "model.tsql_eval_dbt.stg_departments",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "staging",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/stg_departments.sql",
+      "description": "View of departments",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\nselect\n  id,\n  name\nfrom {{ ref('departments') }}",
+      "compiledCode": "\n\nselect\n  id,\n  name\nfrom \"nyc_taxi\".\"main\".\"departments\"",
+      "refs": [
+        {
+          "name": "departments",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "id": {
+          "columnName": "id",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "INTEGER"
+        },
+        "name": {
+          "columnName": "name",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "VARCHAR"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.agg_avg_salary": {
+      "id": "model.tsql_eval_dbt.agg_avg_salary",
+      "name": "agg_avg_salary",
+      "fullName": "model.tsql_eval_dbt.agg_avg_salary",
+      "nodeType": "model",
+      "materialized": "table",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/agg_avg_salary.sql",
+      "description": "Average salary per department",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='table') }}\n\nwith e as (\n  select * from {{ ref('stg_employees') }}\n),\nd as (\n  select * from {{ ref('stg_departments') }}\n)\nselect\n  d.name as dept,\n  avg(e.salary) as avg_salary\nfrom e\njoin d on e.dept_id = d.id\ngroup by d.name\norder by avg_salary desc",
+      "compiledCode": "\n\nwith e as (\n  select * from \"nyc_taxi\".\"main_main\".\"stg_employees\"\n),\nd as (\n  select * from \"nyc_taxi\".\"main_main\".\"stg_departments\"\n)\nselect\n  d.name as dept,\n  avg(e.salary) as avg_salary\nfrom e\njoin d on e.dept_id = d.id\ngroup by d.name\norder by avg_salary desc",
+      "refs": [
+        {
+          "name": "stg_employees",
+          "package": null,
+          "version": null
+        },
+        {
+          "name": "stg_departments",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "dept": {
+          "columnName": "dept",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "VARCHAR"
+        },
+        "avg_salary": {
+          "columnName": "avg_salary",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "DOUBLE"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.stg_employees": {
+      "id": "model.tsql_eval_dbt.stg_employees",
+      "name": "stg_employees",
+      "fullName": "model.tsql_eval_dbt.stg_employees",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "staging",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/stg_employees.sql",
+      "description": "View of employees",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\nselect\n  id,\n  name,\n  dept_id,\n  salary\nfrom {{ ref('employees') }}",
+      "compiledCode": "\n\nselect\n  id,\n  name,\n  dept_id,\n  salary\nfrom \"nyc_taxi\".\"main\".\"employees\"",
+      "refs": [
+        {
+          "name": "employees",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "id": {
+          "columnName": "id",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "INTEGER"
+        },
+        "dept_id": {
+          "columnName": "dept_id",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "INTEGER"
+        },
+        "name": {
+          "columnName": "name",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "salary": {
+          "columnName": "salary",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        }
+      }
+    },
+    "seed.tsql_eval_dbt.employees": {
+      "id": "seed.tsql_eval_dbt.employees",
+      "name": "employees",
+      "fullName": "seed.tsql_eval_dbt.employees",
+      "nodeType": "seed",
+      "materialized": "seed",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main",
+      "path": "seeds/employees.csv",
+      "description": "",
+      "contractEnforced": false,
+      "rawCode": null,
+      "compiledCode": null,
+      "refs": [],
+      "columns": {
+        "id": {
+          "columnName": "id",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        },
+        "name": {
+          "columnName": "name",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "dept_id": {
+          "columnName": "dept_id",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        },
+        "salary": {
+          "columnName": "salary",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        }
+      }
+    },
+    "source.tsql_eval_dbt.nyc.trips_small": {
+      "id": "source.tsql_eval_dbt.nyc.trips_small",
+      "name": "trips_small",
+      "fullName": "source.tsql_eval_dbt.nyc.trips_small",
+      "nodeType": "source",
+      "materialized": "unknown",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "nyc",
+      "path": "models/nyc/source.yml",
+      "description": "NYC Taxi trips sample (DuckDB, schema=nyc)",
+      "contractEnforced": null,
+      "rawCode": null,
+      "compiledCode": null,
+      "refs": [],
+      "columns": {
+        "trip_id": {
+          "columnName": "trip_id",
+          "hasLineage": false,
+          "dataType": "BIGINT"
+        },
+        "pickup_datetime": {
+          "columnName": "pickup_datetime",
+          "hasLineage": true,
+          "dataType": "TIMESTAMP"
+        },
+        "dropoff_datetime": {
+          "columnName": "dropoff_datetime",
+          "hasLineage": true,
+          "dataType": "TIMESTAMP"
+        },
+        "pickup_longitude": {
+          "columnName": "pickup_longitude",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "pickup_latitude": {
+          "columnName": "pickup_latitude",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "dropoff_longitude": {
+          "columnName": "dropoff_longitude",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "dropoff_latitude": {
+          "columnName": "dropoff_latitude",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "passenger_count": {
+          "columnName": "passenger_count",
+          "hasLineage": true,
+          "dataType": "SMALLINT"
+        },
+        "trip_distance": {
+          "columnName": "trip_distance",
+          "hasLineage": true,
+          "dataType": "DOUBLE"
+        },
+        "fare_amount": {
+          "columnName": "fare_amount",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "extra": {
+          "columnName": "extra",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "tip_amount": {
+          "columnName": "tip_amount",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "tolls_amount": {
+          "columnName": "tolls_amount",
+          "hasLineage": false,
+          "dataType": "DOUBLE"
+        },
+        "total_amount": {
+          "columnName": "total_amount",
+          "hasLineage": true,
+          "dataType": "DOUBLE"
+        },
+        "payment_type": {
+          "columnName": "payment_type",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "pickup_ntaname": {
+          "columnName": "pickup_ntaname",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "dropoff_ntaname": {
+          "columnName": "dropoff_ntaname",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.stg_trips_small": {
+      "id": "model.tsql_eval_dbt.stg_trips_small",
+      "name": "stg_trips_small",
+      "fullName": "model.tsql_eval_dbt.stg_trips_small",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "staging",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/nyc/stg_trips_small.sql",
+      "description": "Cleaned staging view for NYC trips_small",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\n-- \uc6d0\ubcf8\uc5d0 \ube48 \ubb38\uc790\uc5f4/\ud0c0\uc785 \uc11e\uc784 \u2192 DuckDB TRY_CAST\ub85c \uc548\uc804 \uce90\uc2a4\ud305\nselect\n  try_cast(pickup_datetime as timestamp)  as pickup_datetime,\n  try_cast(dropoff_datetime as timestamp) as dropoff_datetime,\n  try_cast(passenger_count as int)        as passenger_count,\n  try_cast(trip_distance as double)       as trip_distance,\n  try_cast(total_amount as double)        as total_amount,\n  pickup_ntaname,\n  dropoff_ntaname,\n  payment_type\nfrom {{ source('nyc','trips_small') }}",
+      "compiledCode": "\n\n-- \uc6d0\ubcf8\uc5d0 \ube48 \ubb38\uc790\uc5f4/\ud0c0\uc785 \uc11e\uc784 \u2192 DuckDB TRY_CAST\ub85c \uc548\uc804 \uce90\uc2a4\ud305\nselect\n  try_cast(pickup_datetime as timestamp)  as pickup_datetime,\n  try_cast(dropoff_datetime as timestamp) as dropoff_datetime,\n  try_cast(passenger_count as int)        as passenger_count,\n  try_cast(trip_distance as double)       as trip_distance,\n  try_cast(total_amount as double)        as total_amount,\n  pickup_ntaname,\n  dropoff_ntaname,\n  payment_type\nfrom \"nyc_taxi\".\"nyc\".\"trips_small\"",
+      "refs": [],
+      "columns": {
+        "pickup_datetime": {
+          "columnName": "pickup_datetime",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "TIMESTAMP"
+        },
+        "total_amount": {
+          "columnName": "total_amount",
+          "hasLineage": true,
+          "description": "",
+          "dataType": "DOUBLE"
+        },
+        "dropoff_datetime": {
+          "columnName": "dropoff_datetime",
+          "hasLineage": true,
+          "dataType": "TIMESTAMP"
+        },
+        "passenger_count": {
+          "columnName": "passenger_count",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        },
+        "trip_distance": {
+          "columnName": "trip_distance",
+          "hasLineage": true,
+          "dataType": "DOUBLE"
+        },
+        "pickup_ntaname": {
+          "columnName": "pickup_ntaname",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "dropoff_ntaname": {
+          "columnName": "dropoff_ntaname",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "payment_type": {
+          "columnName": "payment_type",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.top_pickup_nta": {
+      "id": "model.tsql_eval_dbt.top_pickup_nta",
+      "name": "top_pickup_nta",
+      "fullName": "model.tsql_eval_dbt.top_pickup_nta",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/nyc/marts/top_pickup_nta.sql",
+      "description": "",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\nselect\n  pickup_ntaname,\n  count(*) as cnt\nfrom {{ ref('stg_trips_small') }}\nwhere pickup_ntaname is not null and pickup_ntaname <> ''\ngroup by 1\norder by 2 desc\nlimit 10",
+      "compiledCode": "\n\nselect\n  pickup_ntaname,\n  count(*) as cnt\nfrom \"nyc_taxi\".\"main_main\".\"stg_trips_small\"\nwhere pickup_ntaname is not null and pickup_ntaname <> ''\ngroup by 1\norder by 2 desc\nlimit 10",
+      "refs": [
+        {
+          "name": "stg_trips_small",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "pickup_ntaname": {
+          "columnName": "pickup_ntaname",
+          "hasLineage": true,
+          "dataType": "VARCHAR"
+        },
+        "cnt": {
+          "columnName": "cnt",
+          "hasLineage": false,
+          "dataType": "BIGINT"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.monthly_distance_2015_q1": {
+      "id": "model.tsql_eval_dbt.monthly_distance_2015_q1",
+      "name": "monthly_distance_2015_q1",
+      "fullName": "model.tsql_eval_dbt.monthly_distance_2015_q1",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/nyc/marts/monthly_distance_2015_q1.sql",
+      "description": "",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\nselect\n  extract(month from pickup_datetime) as mon,\n  sum(trip_distance) as dist\nfrom {{ ref('stg_trips_small') }}\nwhere extract(year from pickup_datetime) = 2015\n  and extract(month from pickup_datetime) in (1,2,3)\ngroup by 1\norder by 1",
+      "compiledCode": "\n\nselect\n  extract(month from pickup_datetime) as mon,\n  sum(trip_distance) as dist\nfrom \"nyc_taxi\".\"main_main\".\"stg_trips_small\"\nwhere extract(year from pickup_datetime) = 2015\n  and extract(month from pickup_datetime) in (1,2,3)\ngroup by 1\norder by 1",
+      "refs": [
+        {
+          "name": "stg_trips_small",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "mon": {
+          "columnName": "mon",
+          "hasLineage": true,
+          "dataType": "BIGINT"
+        },
+        "dist": {
+          "columnName": "dist",
+          "hasLineage": true,
+          "dataType": "DOUBLE"
+        }
+      }
+    },
+    "model.tsql_eval_dbt.avg_total_by_passenger": {
+      "id": "model.tsql_eval_dbt.avg_total_by_passenger",
+      "name": "avg_total_by_passenger",
+      "fullName": "model.tsql_eval_dbt.avg_total_by_passenger",
+      "nodeType": "model",
+      "materialized": "view",
+      "modelType": "unknown",
+      "database": "nyc_taxi",
+      "schema": "main_main",
+      "path": "models/nyc/marts/avg_total_by_passenger.sql",
+      "description": "",
+      "contractEnforced": false,
+      "rawCode": "{{ config(materialized='view') }}\n\nselect\n  passenger_count,\n  avg(total_amount) as avg_total\nfrom {{ ref('stg_trips_small') }}\ngroup by 1\norder by 2 desc",
+      "compiledCode": "\n\nselect\n  passenger_count,\n  avg(total_amount) as avg_total\nfrom \"nyc_taxi\".\"main_main\".\"stg_trips_small\"\ngroup by 1\norder by 2 desc",
+      "refs": [
+        {
+          "name": "stg_trips_small",
+          "package": null,
+          "version": null
+        }
+      ],
+      "columns": {
+        "passenger_count": {
+          "columnName": "passenger_count",
+          "hasLineage": true,
+          "dataType": "INTEGER"
+        },
+        "avg_total": {
+          "columnName": "avg_total",
+          "hasLineage": true,
+          "dataType": "DOUBLE"
+        }
+      }
+    }
+  },
+  "lineage": {
+    "edges": [
+      {
+        "id": "seed.tsql_eval_dbt.departments:id->model.tsql_eval_dbt.stg_departments:id",
+        "source": "seed.tsql_eval_dbt.departments",
+        "target": "model.tsql_eval_dbt.stg_departments",
+        "sourceColumn": "id",
+        "targetColumn": "id"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.departments:name->model.tsql_eval_dbt.stg_departments:name",
+        "source": "seed.tsql_eval_dbt.departments",
+        "target": "model.tsql_eval_dbt.stg_departments",
+        "sourceColumn": "name",
+        "targetColumn": "name"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_departments:name->model.tsql_eval_dbt.agg_avg_salary:dept",
+        "source": "model.tsql_eval_dbt.stg_departments",
+        "target": "model.tsql_eval_dbt.agg_avg_salary",
+        "sourceColumn": "name",
+        "targetColumn": "dept"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_employees:salary->model.tsql_eval_dbt.agg_avg_salary:avg_salary",
+        "source": "model.tsql_eval_dbt.stg_employees",
+        "target": "model.tsql_eval_dbt.agg_avg_salary",
+        "sourceColumn": "salary",
+        "targetColumn": "avg_salary"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.employees:id->model.tsql_eval_dbt.stg_employees:id",
+        "source": "seed.tsql_eval_dbt.employees",
+        "target": "model.tsql_eval_dbt.stg_employees",
+        "sourceColumn": "id",
+        "targetColumn": "id"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.employees:name->model.tsql_eval_dbt.stg_employees:name",
+        "source": "seed.tsql_eval_dbt.employees",
+        "target": "model.tsql_eval_dbt.stg_employees",
+        "sourceColumn": "name",
+        "targetColumn": "name"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.employees:dept_id->model.tsql_eval_dbt.stg_employees:dept_id",
+        "source": "seed.tsql_eval_dbt.employees",
+        "target": "model.tsql_eval_dbt.stg_employees",
+        "sourceColumn": "dept_id",
+        "targetColumn": "dept_id"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.employees:salary->model.tsql_eval_dbt.stg_employees:salary",
+        "source": "seed.tsql_eval_dbt.employees",
+        "target": "model.tsql_eval_dbt.stg_employees",
+        "sourceColumn": "salary",
+        "targetColumn": "salary"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:pickup_datetime->model.tsql_eval_dbt.stg_trips_small:pickup_datetime",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "pickup_datetime",
+        "targetColumn": "pickup_datetime"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:dropoff_datetime->model.tsql_eval_dbt.stg_trips_small:dropoff_datetime",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "dropoff_datetime",
+        "targetColumn": "dropoff_datetime"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:passenger_count->model.tsql_eval_dbt.stg_trips_small:passenger_count",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "passenger_count",
+        "targetColumn": "passenger_count"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:trip_distance->model.tsql_eval_dbt.stg_trips_small:trip_distance",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "trip_distance",
+        "targetColumn": "trip_distance"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:total_amount->model.tsql_eval_dbt.stg_trips_small:total_amount",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "total_amount",
+        "targetColumn": "total_amount"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:pickup_ntaname->model.tsql_eval_dbt.stg_trips_small:pickup_ntaname",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "pickup_ntaname",
+        "targetColumn": "pickup_ntaname"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:dropoff_ntaname->model.tsql_eval_dbt.stg_trips_small:dropoff_ntaname",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "dropoff_ntaname",
+        "targetColumn": "dropoff_ntaname"
+      },
+      {
+        "id": "source.tsql_eval_dbt.nyc.trips_small:payment_type->model.tsql_eval_dbt.stg_trips_small:payment_type",
+        "source": "source.tsql_eval_dbt.nyc.trips_small",
+        "target": "model.tsql_eval_dbt.stg_trips_small",
+        "sourceColumn": "payment_type",
+        "targetColumn": "payment_type"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small:pickup_ntaname->model.tsql_eval_dbt.top_pickup_nta:pickup_ntaname",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.top_pickup_nta",
+        "sourceColumn": "pickup_ntaname",
+        "targetColumn": "pickup_ntaname"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small:pickup_datetime->model.tsql_eval_dbt.monthly_distance_2015_q1:mon",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.monthly_distance_2015_q1",
+        "sourceColumn": "pickup_datetime",
+        "targetColumn": "mon"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small:trip_distance->model.tsql_eval_dbt.monthly_distance_2015_q1:dist",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.monthly_distance_2015_q1",
+        "sourceColumn": "trip_distance",
+        "targetColumn": "dist"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small:passenger_count->model.tsql_eval_dbt.avg_total_by_passenger:passenger_count",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.avg_total_by_passenger",
+        "sourceColumn": "passenger_count",
+        "targetColumn": "passenger_count"
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small:total_amount->model.tsql_eval_dbt.avg_total_by_passenger:avg_total",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.avg_total_by_passenger",
+        "sourceColumn": "total_amount",
+        "targetColumn": "avg_total"
+      },
+      {
+        "id": "seed.tsql_eval_dbt.departments::->model.tsql_eval_dbt.stg_departments::",
+        "source": "seed.tsql_eval_dbt.departments",
+        "target": "model.tsql_eval_dbt.stg_departments",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_employees::->model.tsql_eval_dbt.agg_avg_salary::",
+        "source": "model.tsql_eval_dbt.stg_employees",
+        "target": "model.tsql_eval_dbt.agg_avg_salary",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_departments::->model.tsql_eval_dbt.agg_avg_salary::",
+        "source": "model.tsql_eval_dbt.stg_departments",
+        "target": "model.tsql_eval_dbt.agg_avg_salary",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "seed.tsql_eval_dbt.employees::->model.tsql_eval_dbt.stg_employees::",
+        "source": "seed.tsql_eval_dbt.employees",
+        "target": "model.tsql_eval_dbt.stg_employees",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small::->model.tsql_eval_dbt.top_pickup_nta::",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.top_pickup_nta",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small::->model.tsql_eval_dbt.monthly_distance_2015_q1::",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.monthly_distance_2015_q1",
+        "sourceColumn": "",
+        "targetColumn": ""
+      },
+      {
+        "id": "model.tsql_eval_dbt.stg_trips_small::->model.tsql_eval_dbt.avg_total_by_passenger::",
+        "source": "model.tsql_eval_dbt.stg_trips_small",
+        "target": "model.tsql_eval_dbt.avg_total_by_passenger",
+        "sourceColumn": "",
+        "targetColumn": ""
+      }
+    ],
+    "parents": {
+      "model.tsql_eval_dbt.stg_departments": {
+        "id": [
+          {
+            "column": "id",
+            "dbt_node": "seed.tsql_eval_dbt.departments"
+          }
+        ],
+        "name": [
+          {
+            "column": "name",
+            "dbt_node": "seed.tsql_eval_dbt.departments"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.agg_avg_salary": {
+        "dept": [
+          {
+            "column": "name",
+            "dbt_node": "model.tsql_eval_dbt.stg_departments"
+          }
+        ],
+        "avg_salary": [
+          {
+            "column": "salary",
+            "dbt_node": "model.tsql_eval_dbt.stg_employees"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.stg_employees": {
+        "id": [
+          {
+            "column": "id",
+            "dbt_node": "seed.tsql_eval_dbt.employees"
+          }
+        ],
+        "name": [
+          {
+            "column": "name",
+            "dbt_node": "seed.tsql_eval_dbt.employees"
+          }
+        ],
+        "dept_id": [
+          {
+            "column": "dept_id",
+            "dbt_node": "seed.tsql_eval_dbt.employees"
+          }
+        ],
+        "salary": [
+          {
+            "column": "salary",
+            "dbt_node": "seed.tsql_eval_dbt.employees"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.stg_trips_small": {
+        "pickup_datetime": [
+          {
+            "column": "pickup_datetime",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "dropoff_datetime": [
+          {
+            "column": "dropoff_datetime",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "passenger_count": [
+          {
+            "column": "passenger_count",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "trip_distance": [
+          {
+            "column": "trip_distance",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "total_amount": [
+          {
+            "column": "total_amount",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "pickup_ntaname": [
+          {
+            "column": "pickup_ntaname",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "dropoff_ntaname": [
+          {
+            "column": "dropoff_ntaname",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ],
+        "payment_type": [
+          {
+            "column": "payment_type",
+            "dbt_node": "source.tsql_eval_dbt.nyc.trips_small"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.top_pickup_nta": {
+        "pickup_ntaname": [
+          {
+            "column": "pickup_ntaname",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "cnt": []
+      },
+      "model.tsql_eval_dbt.monthly_distance_2015_q1": {
+        "mon": [
+          {
+            "column": "pickup_datetime",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "dist": [
+          {
+            "column": "trip_distance",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.avg_total_by_passenger": {
+        "passenger_count": [
+          {
+            "column": "passenger_count",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "avg_total": [
+          {
+            "column": "total_amount",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ]
+      }
+    },
+    "children": {
+      "seed.tsql_eval_dbt.departments": {
+        "id": [
+          {
+            "column": "id",
+            "dbt_node": "model.tsql_eval_dbt.stg_departments"
+          }
+        ],
+        "name": [
+          {
+            "column": "name",
+            "dbt_node": "model.tsql_eval_dbt.stg_departments"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.stg_departments": {
+        "name": [
+          {
+            "column": "dept",
+            "dbt_node": "model.tsql_eval_dbt.agg_avg_salary"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.stg_employees": {
+        "salary": [
+          {
+            "column": "avg_salary",
+            "dbt_node": "model.tsql_eval_dbt.agg_avg_salary"
+          }
+        ]
+      },
+      "seed.tsql_eval_dbt.employees": {
+        "id": [
+          {
+            "column": "id",
+            "dbt_node": "model.tsql_eval_dbt.stg_employees"
+          }
+        ],
+        "name": [
+          {
+            "column": "name",
+            "dbt_node": "model.tsql_eval_dbt.stg_employees"
+          }
+        ],
+        "dept_id": [
+          {
+            "column": "dept_id",
+            "dbt_node": "model.tsql_eval_dbt.stg_employees"
+          }
+        ],
+        "salary": [
+          {
+            "column": "salary",
+            "dbt_node": "model.tsql_eval_dbt.stg_employees"
+          }
+        ]
+      },
+      "source.tsql_eval_dbt.nyc.trips_small": {
+        "pickup_datetime": [
+          {
+            "column": "pickup_datetime",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "dropoff_datetime": [
+          {
+            "column": "dropoff_datetime",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "passenger_count": [
+          {
+            "column": "passenger_count",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "trip_distance": [
+          {
+            "column": "trip_distance",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "total_amount": [
+          {
+            "column": "total_amount",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "pickup_ntaname": [
+          {
+            "column": "pickup_ntaname",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "dropoff_ntaname": [
+          {
+            "column": "dropoff_ntaname",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ],
+        "payment_type": [
+          {
+            "column": "payment_type",
+            "dbt_node": "model.tsql_eval_dbt.stg_trips_small"
+          }
+        ]
+      },
+      "model.tsql_eval_dbt.stg_trips_small": {
+        "pickup_ntaname": [
+          {
+            "column": "pickup_ntaname",
+            "dbt_node": "model.tsql_eval_dbt.top_pickup_nta"
+          }
+        ],
+        "pickup_datetime": [
+          {
+            "column": "mon",
+            "dbt_node": "model.tsql_eval_dbt.monthly_distance_2015_q1"
+          }
+        ],
+        "trip_distance": [
+          {
+            "column": "dist",
+            "dbt_node": "model.tsql_eval_dbt.monthly_distance_2015_q1"
+          }
+        ],
+        "passenger_count": [
+          {
+            "column": "passenger_count",
+            "dbt_node": "model.tsql_eval_dbt.avg_total_by_passenger"
+          }
+        ],
+        "total_amount": [
+          {
+            "column": "avg_total",
+            "dbt_node": "model.tsql_eval_dbt.avg_total_by_passenger"
+          }
+        ]
+      }
+    }
+  },
+  "tree": {
+    "byDatabase": {
+      "nyc_taxi": {
+        "main": [
+          "seed.tsql_eval_dbt.departments",
+          "seed.tsql_eval_dbt.employees"
+        ],
+        "main_main": [
+          "model.tsql_eval_dbt.agg_avg_salary",
+          "model.tsql_eval_dbt.avg_total_by_passenger",
+          "model.tsql_eval_dbt.monthly_distance_2015_q1",
+          "model.tsql_eval_dbt.stg_departments",
+          "model.tsql_eval_dbt.stg_employees",
+          "model.tsql_eval_dbt.stg_trips_small",
+          "model.tsql_eval_dbt.top_pickup_nta"
+        ],
+        "nyc": [
+          "source.tsql_eval_dbt.nyc.trips_small"
+        ]
+      }
+    },
+    "byPath": {
+      "seeds": {
+        "__items__": [
+          "seed.tsql_eval_dbt.departments",
+          "seed.tsql_eval_dbt.employees"
+        ]
+      },
+      "models": {
+        "__items__": [
+          "model.tsql_eval_dbt.agg_avg_salary",
+          "model.tsql_eval_dbt.stg_departments",
+          "model.tsql_eval_dbt.stg_employees"
+        ],
+        "nyc": {
+          "__items__": [
+            "model.tsql_eval_dbt.stg_trips_small",
+            "source.tsql_eval_dbt.nyc.trips_small"
+          ],
+          "marts": {
+            "__items__": [
+              "model.tsql_eval_dbt.avg_total_by_passenger",
+              "model.tsql_eval_dbt.monthly_distance_2015_q1",
+              "model.tsql_eval_dbt.top_pickup_nta"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

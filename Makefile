@@ -1,123 +1,120 @@
-DBT_ROOT ?= $(CURDIR)
-export DBT_ROOT
-
+# ========= Global =========
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help uv-setup db-setup \
-        eval-sqlite eval-trino eval-databricks eval-spark \
-        spider2-prepare spider2-dbt-sample spider2-lite-prepare spider2-build-sqlite eval-spider2-lite \
-        dbt-build dbt-run dbt-test dbt-debug \
-        test git-init github-push \
-        uv-add-colibri uv-add-duckdb dbt-compile dbt-docs colibri colibri-open colibri-clean
+# 프로젝트 루트/프로필 (dbt가 ENV를 쓰는 경우 대비)
+DBT_ROOT ?= $(CURDIR)
+export DBT_ROOT
+DBT_PROFILES_DIR ?= ./dbt
+export DBT_PROFILES_DIR
 
+# DuckDB 파일/엔진 URL
+DUCKDB_FILE ?= ./data/nyc_taxi.duckdb
+ENGINE_URL_DUCK := duckdb:///./data/nyc_taxi.duckdb
+
+# Ollama 모델 (원하면 make 호출 시 OLLAMA_MODEL=... 덮어쓰기)
+OLLAMA_MODEL ?= llama3.1:8b
+
+# ========== HELP ==========
+.PHONY: help
 help: ## Show this help
-	@grep -E '^[a-zA-Z0-9_.-]+:.*?##' Makefile | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-24s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_.-]+:.*?##' Makefile | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-26s\033[0m %s\n", $$1, $$2}'
 
-EXTRAS ?=
+# ========== Env / deps ==========
+.PHONY: uv-setup uv-add-colibri uv-add-duckdb
 uv-setup: ## Create venv and install deps via uv
-	@if ! command -v uv >/dev/null 2>&1; then echo "[!] uv not found. Install with: pipx install uv  (or) brew install uv"; fi
+	@if ! command -v uv >/dev/null 2>&1; then echo "[!] uv not found. Install with: pipx install uv  (or) brew install uv"; exit 1; fi
 	uv venv
-	if [ -n "$(EXTRAS)" ]; then uv sync $(foreach e,$(EXTRAS),--extra $(e)); else uv sync; fi
+	uv sync
 
-db-setup: ## Create sample SQLite DB (data/sample.db) + sample testcases/preds
-	uv run python scripts/setup_db.py
-
-eval-sqlite: ## Run evaluation against local SQLite (default)
-	BACKEND=sqlalchemy ENGINE_URL=sqlite:///./data/sample.db uv run tsql-eval run --testcases data/testcases_sample.json --predictions predictions/sample_preds.json --report out/sqlite_report.json
-
-eval-trino: ## Run evaluation against Trino (set ENGINE_URL)
-	@if [ -z "$$ENGINE_URL" ]; then echo "Set ENGINE_URL=trino://user@host:8080/catalog/schema"; exit 1; fi
-	BACKEND=sqlalchemy ENGINE_URL=$$ENGINE_URL uv run tsql-eval run --testcases data/testcases_sample.json --predictions predictions/sample_preds.json --dialect trino --report out/trino_report.json
-
-eval-databricks: ## Run evaluation against Databricks (set ENGINE_URL)
-	@if [ -z "$$ENGINE_URL" ]; then echo "Set ENGINE_URL=databricks+connector://token:...@host:443/DEFAULT?http_path=/sql/1.0/warehouses/<id>&catalog=main&schema=default"; exit 1; fi
-	BACKEND=sqlalchemy ENGINE_URL=$$ENGINE_URL uv run tsql-eval run --testcases data/testcases_sample.json --predictions predictions/sample_preds.json --dialect spark --report out/dbx_report.json
-
-eval-spark: ## Run evaluation against Spark Thrift Server
-	BACKEND=spark SPARK_HOST=$${SPARK_HOST:-localhost} SPARK_PORT=$${SPARK_PORT:-10000} SPARK_DB=$${SPARK_DB:-default} SPARK_AUTH=$${SPARK_AUTH:-NONE} SPARK_USER=$${SPARK_USER:-kyungjun} uv run tsql-eval run --testcases data/testcases_sample.json --predictions predictions/sample_preds.json --dialect spark --report out/spark_report.json
-
-# --- Spider2 helpers ---
-spider2-prepare: ## Convert Spider2 (lite/snow/dbt/custom json) -> testcases JSON
-	uv run python tools/spider2_prepare.py --help
-
-spider2-dbt-sample: ## Build sample Spider2-DBT-like testcases and run (SQLite)
-	uv run python tools/spider2_dbt_prepare.py --root tools/examples/spider2_dbt_sample --output out/spider2_dbt_testcases.json
-	BACKEND=sqlalchemy ENGINE_URL=sqlite:///./data/sample.db uv run tsql-eval run --testcases out/spider2_dbt_testcases.json --predictions predictions/sample_preds.json --dialect spark --report out/report_spider2_dbt.json
-
-spider2-lite-prepare: ## Convert Spider2 lite/snow to testcases + SQLite DDL
-	uv run python tools/spider2_lite_snow_prepare.py --tasks /path/to/spider2_lite_or_snow --schema-json /path/to/schema.json --ddl-out out/spider2_sqlite_schema.sql --testcases-out out/spider2_testcases.json
-
-spider2-build-sqlite: ## Build SQLite DB from Spider2 DDL (and optional CSVs)
-	uv run python tools/build_sqlite_from_schema.py --ddl out/spider2_sqlite_schema.sql --db data/spider2.db --csv-folder /path/to/csvs
-
-eval-spider2-lite: ## Run eval using built Spider2 SQLite DB
-	BACKEND=sqlalchemy ENGINE_URL=sqlite:///./data/spider2.db uv run tsql-eval run --testcases out/spider2_testcases.json --predictions predictions/sample_preds.json --dialect spark --report out/spider2_report.json
-
-# --- dbt ---
-dbt-build: db-setup ## dbt build (SQLite target by default)
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt build --project-dir dbt --target sqlite
-dbt-run: ## dbt run
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt run --project-dir dbt --target sqlite
-dbt-test: ## dbt test
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt test --project-dir dbt --target sqlite
-dbt-debug: ## dbt debug (checks profile/connection)
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt debug --project-dir dbt --target sqlite
-
-# --- tests ---
-test: ## Run pytest
-	uv run pytest
-
-# --- docs / lineage (dbt-colibri) -----------------------------------
 uv-add-colibri: ## Install dbt-colibri
 	uv add dbt-colibri
+
 uv-add-duckdb: ## Install dbt-duckdb
 	uv add "dbt-duckdb>=1.9,<1.11"
 
-dbt-compile: ## Generate manifest.json (duckdb target for colibri)
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt compile --project-dir dbt --target duck
-
-dbt-docs: ## Generate catalog.json (duckdb target for colibri)
-	DBT_ROOT=$(CURDIR) DBT_PROFILES_DIR=./dbt uv run dbt docs generate --project-dir dbt --target duck
-
-# Run inside dbt/ so colibri uses default target/ and dist/ without flags
-colibri: dbt-compile dbt-docs ## Build lineage site at dbt/dist (duckdb-based)
-	cd dbt && uv run colibri generate
-	@echo "✅ Open dbt/dist/index.html"
-
-colibri-open: ## Open lineage site (macOS/Linux)
-	@[ "$$(uname)" = "Darwin" ] && open dbt/dist/index.html || xdg-open dbt/dist/index.html 2>/dev/null || echo "Open dbt/dist/index.html in your browser"
-
-colibri-clean: ## Remove generated lineage site
-	rm -rf dbt/dist
-
-# --- NYC Taxi with DuckDB ------------------------------------------
-.PHONY: nyc-duckdb nyc-predict-ollama-duck nyc-eval-duckdb
-
+# ========== NYC Taxi -> DuckDB ==========
+.PHONY: nyc-duckdb
 nyc-duckdb: ## Build DuckDB from NYC Taxi 3M sample (data/nyc_taxi.duckdb)
 	uv run python scripts/nyc_to_duckdb.py
 
-nyc-predict-ollama-duck: ## LLM으로 DuckDB용 예측 생성
+# ========== dbt (DuckDB target) ==========
+.PHONY: dbt-seed-duck dbt-build-duck dbt-run-duck dbt-test-duck dbt-debug-duck dbt-compile-duck dbt-docs-duck
+dbt-seed-duck: ## dbt seed (duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt seed --project-dir dbt --target duck
+
+dbt-build-duck: ## dbt build (duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt build --project-dir dbt --target duck
+
+dbt-run-duck: ## dbt run (duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt run --project-dir dbt --target duck
+
+dbt-test-duck: ## dbt test (duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt test --project-dir dbt --target duck
+
+dbt-debug-duck: ## dbt debug (duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt debug --project-dir dbt --target duck
+
+dbt-compile-duck: ## Generate manifest.json (for colibri, duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt compile --project-dir dbt --target duck
+
+dbt-docs-duck: ## Generate catalog.json (for colibri, duck)
+	DBT_PROFILES_DIR=$(DBT_PROFILES_DIR) uv run dbt docs generate --project-dir dbt --target duck
+
+# ========== Lineage (dbt-colibri) ==========
+.PHONY: colibri-duck colibri-open colibri-clean colibri-copy-to-site
+colibri-duck: dbt-compile-duck dbt-docs-duck ## Build lineage site -> dbt/dist (duck)
+	cd dbt && uv run colibri generate --output-dir dist
+	@echo "✅ Open dbt/dist/index.html"
+
+colibri-open: ## Open lineage site
+	@[ "$$(uname)" = "Darwin" ] && open dbt/dist/index.html || xdg-open dbt/dist/index.html 2>/dev/null || echo "Open dbt/dist/index.html in your browser"
+
+colibri-clean: ## Remove dbt/dist
+	rm -rf dbt/dist
+
+colibri-copy-to-site: ## Copy lineage site into ./site/colibri
+	rm -rf site/colibri && mkdir -p site/colibri
+	cp -r dbt/dist/* site/colibri/
+
+# ========== Predict (Ollama) & Evaluate ==========
+.PHONY: nyc-predict-ollama-duck nyc-eval-duckdb
+nyc-predict-ollama-duck: ## Generate predictions with Ollama (duck)
 	uv run python tools/predict_ollama_nyc_duckdb.py \
 	  --testcases data/testcases_nyc_duckdb.json \
 	  --output    predictions/nyc_duckdb_preds.json \
-	  --model     $${OLLAMA_MODEL:-llama3.1:8b}
+	  --model     $(OLLAMA_MODEL)
 
-nyc-eval-duckdb: ## Evaluate with tsql-eval on DuckDB
-	BACKEND=sqlalchemy ENGINE_URL=duckdb:///./data/nyc_taxi.duckdb \
+nyc-eval-duckdb: ## Evaluate predictions on DuckDB with tsql-eval
+	BACKEND=sqlalchemy ENGINE_URL=$(ENGINE_URL_DUCK) \
 	uv run tsql-eval run \
 	  --testcases data/testcases_nyc_duckdb.json \
 	  --predictions predictions/nyc_duckdb_preds.json \
 	  --dialect duckdb \
 	  --report out/nyc_duckdb_report.json
 
-# --- site (GitHub Pages) ----------------------------------------
-.PHONY: site-build site-clean
-
-site-build: ## Build static site to ./site from reports in ./out
+# ========== Static site (GitHub Pages) ==========
+.PHONY: site-build site-open site-clean site-all
+site-build: ## Build ./site from reports in ./out (+ embed colibri if copied)
 	uv run python scripts/build_site.py
-	@echo "Open ./site/index.html"
+	@echo "✅ Site generated. Open ./site/index.html"
+
+site-open: ## Open ./site/index.html
+	@[ "$$(uname)" = "Darwin" ] && open site/index.html || xdg-open site/index.html 2>/dev/null || echo "Open site/index.html in your browser"
 
 site-clean: ## Remove ./site
 	rm -rf site
 
+site-all: ## NYC→DuckDB → dbt → lineage → predict → eval → site (one-shot)
+	make nyc-duckdb
+	make dbt-build-duck
+	make colibri-duck
+	make colibri-copy-to-site
+	make nyc-predict-ollama-duck
+	make nyc-eval-duckdb
+	make site-build
+
+# ========== Tests ==========
+.PHONY: test
+test: ## Run pytest
+	uv run pytest

@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stg_trips_small
+    description: "Cleaned staging view for NYC trips_small"
+    columns:
+      - name: pickup_datetime
+        tests: [not_null]
+      - name: total_amount
+        tests: [not_null]
+      # passenger_count / pickup_ntaname 등은 결측 가능성 있어서 필수 테스트는 생략

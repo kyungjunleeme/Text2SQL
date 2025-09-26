@@ -1,14 +1,21 @@
-name: 'tsql_eval_dbt'
-version: '1.0.0'
+name: tsql_eval_dbt
+version: 1.0.0
 config-version: 2
-profile: tsql_eval
-model-paths: ['models']
-seed-paths: ['seeds']
-target-path: 'target'
-clean-targets: ['target']
+
+# 이 프로젝트가 사용할 프로필 이름 (profiles.yml의 key와 일치)
+profile: tsql_eval_duckdb
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
 models:
-  +materialized: view
-  tsql_eval_dbt: {}
-vars:
-  employees_source: "employees"
-  departments_source: "departments"
+  tsql_eval_dbt:
+    +materialized: view     # 기본은 view로, 필요 시 모델별로 table/materialized 바꿔도 됨
+    +schema: main           # dbt가 생성할 스키마(=DuckDB의 schema). 결과물은 main에 올라감

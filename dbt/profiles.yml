@@ -1,18 +1,14 @@
-# dbt/profiles.yml
-tsql_eval:
-  target: sqlite
+tsql_eval_duckdb:
+  target: duck
   outputs:
-    sqlite:
-      type: sqlite
-      threads: 1
-      database: "sample"
-      schema: "main"
-      schemas_and_paths:
-        main: "{{ env_var('DBT_ROOT') }}/data/sample.db"
-      schema_directory: "{{ env_var('DBT_ROOT') }}/data"
-
     duck:
       type: duckdb
+      # Makefile에서 DBT_ROOT를 이미 export하므로 절대경로/상대경로 이슈 없음
+      path: "{{ env_var('DBT_ROOT') }}/data/nyc_taxi.duckdb"
+      schema: main          # dbt가 결과물을 올릴 기본 스키마
       threads: 4
-      path: "{{ env_var('DBT_ROOT') }}/data/sample.duckdb"
-      schema: "main"
+      # 필요 확장자. (httpfs/parquet/json 등은 상황에 맞게 유지/제거)
+      extensions:
+        - httpfs
+        - parquet
+        - json
