@@ -9,15 +9,6 @@ on:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python: [ "3.10", "3.11" ]
-        profile: [ sqlite, duckdb ]
-
-    env:
-      DBT_PROFILES_DIR: ./dbt
-      DBT_ROOT: ${{ github.workspace }}
 
     steps:
       - name: Checkout
@@ -26,93 +17,47 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.12"
 
-      - name: Install uv (via pipx)
-        run: |
-          pipx install uv
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install uv
+        run: pipx install uv
 
       - name: Cache uv
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ matrix.python }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-${{ matrix.python }}-
             ${{ runner.os }}-uv-
 
       - name: Sync deps (uv)
-        run: |
-          uv venv
-          uv sync
+        run: uv sync
 
-      - name: Prepare sample DB
-        run: |
-          uv run python scripts/setup_db.py
+      # ✅ DuckDB 파일 생성 (NYC Taxi 3M 샘플 로드)
+      - name: Build NYC DuckDB
+        env:
+          DBT_ROOT: ${{ github.workspace }}   # profiles.yml에서 사용하는 루트 경로
+        run: uv run python scripts/sync_to_duckdb.py
 
-      - name: Pytest
+      # (선택) DuckDB 내용 sanity check
+      - name: Sanity check nyc.trips_small
         run: |
-          uv run pytest
+          python - <<'PY'
+          import duckdb
+          con = duckdb.connect('data/nyc_taxi.duckdb')
+          print(con.sql("select count(*) as cnt from nyc.trips_small").fetchall())
+          PY
 
-      # duckdb 타깃에서만 어댑터 설치
-      - name: Install dbt-duckdb (duck target only)
-        if: ${{ matrix.profile == 'duckdb' }}
-        run: |
-          uv run python -m pip install "dbt-duckdb>=1.9,<1.11"
-
-      - name: dbt (sqlite target)
-        if: ${{ matrix.profile == 'sqlite' }}
-        run: |
-          uv run dbt seed  --project-dir dbt --target sqlite
-          uv run dbt build --project-dir dbt --target sqlite
-          uv run dbt test  --project-dir dbt --target sqlite
-
-      - name: dbt (duckdb target)
-        if: ${{ matrix.profile == 'duckdb' }}
+      # ✅ dbt 빌드/테스트 (DuckDB 타깃)
+      - name: dbt seed/build/test (duckdb)
+        env:
+          DBT_PROFILES_DIR: ./dbt
+          DBT_ROOT: ${{ github.workspace }}
         run: |
           uv run dbt seed  --project-dir dbt --target duck
           uv run dbt build --project-dir dbt --target duck
           uv run dbt test  --project-dir dbt --target duck
 
-      - name: Optional: Eval on Trino (if secret set)
-        if: ${{ secrets.TRINO_ENGINE_URL }}
-        env:
-          ENGINE_URL: ${{ secrets.TRINO_ENGINE_URL }}
-        run: |
-          echo "Running Trino evaluation..."
-          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run \
-            --testcases data/testcases_sample.json \
-            --predictions predictions/sample_preds.json \
-            --dialect trino \
-            --report out/trino_report.json
-
-      - name: Optional: Eval on Databricks (if secret set)
-        if: ${{ secrets.DATABRICKS_ENGINE_URL }}
-        env:
-          ENGINE_URL: ${{ secrets.DATABRICKS_ENGINE_URL }}
-        run: |
-          echo "Running Databricks evaluation..."
-          BACKEND=sqlalchemy ENGINE_URL="$ENGINE_URL" uv run tsql-eval run \
-            --testcases data/testcases_sample.json \
-            --predictions predictions/sample_preds.json \
-            --dialect spark \
-            --report out/dbx_report.json
-
-      - name: Optional: Eval on Spark Thrift Server (if secrets set)
-        if: ${{ secrets.SPARK_HOST }}
-        env:
-          SPARK_HOST: ${{ secrets.SPARK_HOST }}
-          SPARK_PORT: ${{ secrets.SPARK_PORT }}
-          SPARK_DB: ${{ secrets.SPARK_DB }}
-          SPARK_AUTH: ${{ secrets.SPARK_AUTH }}
-          SPARK_USER: ${{ secrets.SPARK_USER }}
-        run: |
-          echo "Running Spark Thrift Server evaluation..."
-          BACKEND=spark \
-          SPARK_HOST="$SPARK_HOST" SPARK_PORT="$SPARK_PORT" SPARK_DB="$SPARK_DB" SPARK_AUTH="$SPARK_AUTH" SPARK_USER="$SPARK_USER" \
-          uv run tsql-eval run \
-            --testcases data/testcases_sample.json \
-            --predictions predictions/sample_preds.json \
-            --dialect spark \
-            --report out/spark_report.json
+      # (선택) 사이트/리니지까지 같이 만들고 싶으면 아래 단계 추가
+      # - name: Build site
+      #   run: uv run python scripts/build_site.py

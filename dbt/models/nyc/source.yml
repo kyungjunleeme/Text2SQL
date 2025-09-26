@@ -2,7 +2,8 @@ version: 2
 
 sources:
   - name: nyc
-    schema: nyc            # DuckDB에서 만든 schema (nyc.trips_small)
+    schema: nyc
+    # database는 DuckDB에선 보통 생략합니다 (파일 자체가 DB라 catalog 개념이 약함)
+    # database: null
     tables:
       - name: trips_small
-        description: "NYC Taxi trips sample (DuckDB, schema=nyc)"
